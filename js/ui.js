@@ -15,9 +15,13 @@ import { initExport } from './export.js';
 
 // ── Auth guard ───────────────────────────────────────────────
 
+// If loaded via direct navigation to dashboard.html (not via transitionToDashboard),
+// the enc key is gone — redirect to login page.
 if (!isAuthenticated()) {
   sessionStorage.removeItem('session_active');
-  window.location.replace('index.html');
+  // Use location.replace so the back button doesn't loop
+  window.location.replace(window.location.pathname.includes('dashboard') ? 'index.html' : window.location.href);
+  throw new Error('Not authenticated');
 }
 
 // ── App state ────────────────────────────────────────────────
@@ -43,7 +47,7 @@ async function boot() {
   bindMobileMenu();
 
   const timeout = state.settings?.inactivityTimeoutMinutes || 15;
-  startInactivityTimer(timeout, () => { window.location.replace('index.html'); });
+  startInactivityTimer(timeout, () => { window.location.replace('index.html?locked=1'); });
 
   await initAllCharts(state);
   renderSection('overview');
@@ -157,7 +161,7 @@ function bindSidebarToggle() {
 function bindLockBtn() {
   document.getElementById('lock-btn').addEventListener('click', () => {
     logout();
-    window.location.replace('index.html');
+    window.location.replace('index.html?locked=1');
   });
 }
 
