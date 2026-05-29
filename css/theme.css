@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   --bg-canvas:       #111217;
@@ -34,14 +34,14 @@
   --chart-7: #6ccf8e;
   --chart-8: #4dd0e1;
 
-  --font-mono:   'JetBrains Mono', monospace;
-  --font-body:   'Inter', sans-serif;
+  --font-mono:   'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+  --font-body:   'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 
-  --sidebar-w:   220px;
+  --sidebar-w:   224px;
   --sidebar-col: 56px;
-  --panel-pad:   16px;
-  --radius:      4px;
-  --radius-lg:   8px;
+  --panel-pad:   20px;
+  --radius:      5px;
+  --radius-lg:   10px;
 
   --transition: 0.15s ease;
 }
@@ -57,39 +57,41 @@ html, body {
   background: var(--bg-canvas);
   color: var(--text-primary);
   font-family: var(--font-body);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Typography scale */
+/* ── Typography scale ───────────────────────────────────────── */
 .metric-lg {
   font-family: var(--font-mono);
-  font-size: 28px;
-  font-weight: 500;
-  line-height: 1.2;
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 .metric-md {
   font-family: var(--font-mono);
-  font-size: 20px;
-  font-weight: 500;
-  line-height: 1.2;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 .metric-sm {
   font-family: var(--font-mono);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
 }
 .panel-heading {
   font-family: var(--font-body);
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
 }
 .label-muted {
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 400;
   color: var(--text-secondary);
 }
@@ -97,7 +99,7 @@ html, body {
   font-family: var(--font-mono);
 }
 
-/* Colour utilities */
+/* ── Colour utilities ───────────────────────────────────────── */
 .text-positive { color: var(--color-positive); }
 .text-negative { color: var(--color-negative); }
 .text-warning  { color: var(--color-warning); }
@@ -106,13 +108,13 @@ html, body {
 .text-secondary{ color: var(--text-secondary); }
 .text-purple   { color: var(--color-purple); }
 
-/* Scrollbar */
+/* ── Scrollbar ──────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-canvas); }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* Focus ring */
+/* ── Focus ring ─────────────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--color-info);
   outline-offset: 2px;
@@ -121,7 +123,6 @@ html, body {
 a { color: var(--text-link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-/* Divider */
 .divider {
   border: none;
   border-top: 1px solid var(--border-weak);

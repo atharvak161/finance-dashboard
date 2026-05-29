@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance Dashboard — Income</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <div class="content page-content" id="content">
+
+      <div class="section-header">
+        <div>
+          <div class="section-title">Income</div>
+          <div class="section-subtitle">Salary, deductions &amp; take-home pay</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Income Settings</span></div>
+          <div id="income-fields"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Monthly Breakdown</span></div>
+          <div id="income-deductions"></div>
+        </div>
+      </div>
+
+      <div class="grid-2 mt-20">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Pay Waterfall</span></div>
+          <div class="chart-wrap chart-h-260"><canvas id="chart-income-waterfall"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Career Salary Scenarios</span></div>
+          <div id="income-scenarios"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script type="module" src="js/pages/income.js"></script>
+</body>
+</html>

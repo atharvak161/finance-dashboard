@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance Dashboard — Export</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <div class="content page-content" id="content">
+
+      <div class="section-header">
+        <div>
+          <div class="section-title">Export</div>
+          <div class="section-subtitle">Download your financial data</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Excel Workbook</span></div>
+          <p style="font-size:13.5px;color:var(--text-secondary);margin-bottom:20px">
+            Full workbook with 10 sheets covering all sections of your dashboard.
+          </p>
+          <button class="btn btn-primary" id="export-excel-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Export Excel Workbook
+          </button>
+          <p class="label-muted mt-8">FinanceDashboard_YYYY-MM-DD.xlsx</p>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">JSON Backup</span></div>
+          <p style="font-size:13.5px;color:var(--text-secondary);margin-bottom:20px">
+            Export all encrypted data for backup or restore.
+          </p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-secondary" id="data-export-btn">Export JSON backup</button>
+            <input type="file" id="data-import-file" accept=".json" style="display:none">
+            <button class="btn btn-secondary" id="data-import-btn">Import JSON backup</button>
+          </div>
+          <hr class="divider mt-16">
+          <p class="label-muted" style="margin-bottom:10px">
+            Reset all data to defaults. <strong style="color:var(--color-negative)">Cannot be undone.</strong>
+          </p>
+          <button class="btn btn-danger" id="data-reset-btn">Reset to defaults</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script type="module" src="js/pages/export-page.js"></script>
+</body>
+</html>

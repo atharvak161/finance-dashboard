@@ -1,4 +1,4 @@
-/* ── Panel / Card ───────────────────────────────────────────── */
+/* ── Panel / Card ─────────────────────────────────────────── */
 .panel {
   background: var(--bg-panel);
   border: 1px solid var(--border-weak);
@@ -10,41 +10,48 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .panel-title {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
-/* ── Metric card ────────────────────────────────────────────── */
+/* ── Metric card ─────────────────────────────────────────── */
 .metric-card {
   background: var(--bg-panel);
   border: 1px solid var(--border-weak);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  transition: background var(--transition);
+  gap: 8px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
-.metric-card:hover { background: var(--bg-panel-hover); }
+.metric-card:hover {
+  background: var(--bg-panel-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+}
 
 .metric-card .label {
-  font-size: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--text-secondary);
-  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .metric-card .value {
   font-family: var(--font-mono);
-  font-size: 26px;
-  font-weight: 500;
+  font-size: 30px;
+  font-weight: 600;
   line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .metric-card .sub {
@@ -60,21 +67,23 @@
 .delta-pos { color: var(--color-positive); }
 .delta-neg { color: var(--color-negative); }
 
-/* ── Buttons ────────────────────────────────────────────────── */
+/* ── Buttons ─────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 7px 16px;
   border-radius: var(--radius);
   border: 1px solid transparent;
   cursor: pointer;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
-  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  transition: background var(--transition), color var(--transition),
+              border-color var(--transition), transform var(--transition);
   white-space: nowrap;
 }
+.btn:active { transform: scale(0.98); }
 .btn svg { width: 14px; height: 14px; }
 
 .btn-primary {
@@ -105,10 +114,7 @@
 }
 .btn-ghost:hover { color: var(--text-primary); background: var(--bg-panel-hover); }
 
-.btn-sm {
-  padding: 4px 10px;
-  font-size: 12px;
-}
+.btn-sm { padding: 4px 10px; font-size: 12.5px; }
 .btn-sm svg { width: 12px; height: 12px; }
 
 .btn-icon {
@@ -127,17 +133,17 @@
 .btn-icon svg { width: 15px; height: 15px; }
 .btn-icon.danger:hover { color: var(--color-negative); }
 
-/* ── Form controls ──────────────────────────────────────────── */
+/* ── Form controls ───────────────────────────────────────── */
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .form-label {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--text-secondary);
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .form-input,
@@ -147,23 +153,21 @@
   border-radius: var(--radius);
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 13px;
-  padding: 6px 10px;
+  font-size: 14px;
+  padding: 7px 11px;
   width: 100%;
-  transition: border-color var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition);
   outline: none;
 }
-
 .form-input:focus,
-.form-select:focus { border-color: var(--color-info); }
-
+.form-select:focus {
+  border-color: var(--color-info);
+  box-shadow: 0 0 0 3px rgba(87,148,242,0.15);
+}
 .form-input:hover,
 .form-select:hover { border-color: var(--border-strong); }
 
-.form-select {
-  font-family: var(--font-body);
-  cursor: pointer;
-}
+.form-select { font-family: var(--font-body); cursor: pointer; }
 
 .form-input-inline {
   background: transparent;
@@ -173,7 +177,7 @@
   color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: 13px;
-  padding: 2px 4px;
+  padding: 3px 4px;
   transition: border-color var(--transition);
   outline: none;
   width: 100%;
@@ -186,64 +190,48 @@ textarea.form-input {
   min-height: 72px;
 }
 
-/* ── Tables ─────────────────────────────────────────────────── */
-.table-wrap {
-  overflow-x: auto;
-}
+/* ── Tables ──────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 13.5px;
 }
-
 .data-table th {
   text-align: left;
   padding: 8px 12px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   border-bottom: 1px solid var(--border-medium);
   white-space: nowrap;
 }
-
 .data-table td {
-  padding: 8px 12px;
+  padding: 9px 12px;
   border-bottom: 1px solid var(--border-weak);
   color: var(--text-primary);
   vertical-align: middle;
 }
-
 .data-table tr:last-child td { border-bottom: none; }
-
 .data-table tr:hover td { background: var(--bg-panel-hover); }
-
 .data-table .mono { font-family: var(--font-mono); }
-
-.data-table .td-actions {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
+.data-table .td-actions { display: flex; gap: 4px; align-items: center; }
 .td-right { text-align: right; }
 
-/* Total row */
 .data-table tr.total-row td {
   border-top: 1px solid var(--border-medium);
-  font-weight: 500;
+  font-weight: 600;
   background: var(--bg-surface);
 }
-
-/* Milestone row highlight */
 .data-table tr.milestone td {
   color: var(--color-yellow);
-  background: rgba(250, 222, 42, 0.04);
+  background: rgba(250,222,42,0.04);
 }
 
-/* ── Badges ─────────────────────────────────────────────────── */
+/* ── Badges ──────────────────────────────────────────────── */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -251,35 +239,29 @@ textarea.form-input {
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
 }
 .badge-positive { background: rgba(115,191,105,0.15); color: var(--color-positive); }
 .badge-negative { background: rgba(242,73,92,0.15);  color: var(--color-negative); }
-.badge-warning  { background: rgba(255,152,48,0.15); color: var(--color-warning); }
-.badge-info     { background: rgba(87,148,242,0.15); color: var(--color-info); }
-.badge-neutral  { background: var(--bg-panel-hover); color: var(--text-secondary); }
+.badge-warning  { background: rgba(255,152,48,0.15);  color: var(--color-warning); }
+.badge-info     { background: rgba(87,148,242,0.15);  color: var(--color-info); }
+.badge-neutral  { background: var(--bg-panel-hover);  color: var(--text-secondary); }
 .badge-paid     { background: rgba(115,191,105,0.15); color: var(--color-positive); }
 .badge-pending  { background: rgba(255,152,48,0.15);  color: var(--color-warning); }
 
-/* ── Progress bar ───────────────────────────────────────────── */
-.progress-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
+/* ── Progress bar ────────────────────────────────────────── */
+.progress-wrap { display: flex; flex-direction: column; gap: 4px; }
 .progress-track {
-  height: 6px;
+  height: 7px;
   background: var(--bg-input);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
 }
-
 .progress-fill {
   height: 100%;
-  border-radius: 3px;
-  transition: width 0.4s ease;
+  border-radius: 4px;
+  transition: width 0.5s ease;
 }
 .progress-fill.info     { background: var(--color-info); }
 .progress-fill.positive { background: var(--color-positive); }
@@ -293,7 +275,7 @@ textarea.form-input {
   color: var(--text-secondary);
 }
 
-/* ── Gauge / Speedometer ────────────────────────────────────── */
+/* ── Gauge / Speedometer ─────────────────────────────────── */
 .gauge-wrap {
   display: flex;
   flex-direction: column;
@@ -301,52 +283,54 @@ textarea.form-input {
   gap: 4px;
   padding: 8px;
 }
-
 .gauge-chart-container {
   position: relative;
   width: 160px;
   height: 90px;
 }
-
 .gauge-chart-container canvas {
   position: absolute;
   top: 0; left: 0;
   width: 100% !important;
   height: 100% !important;
 }
-
 .gauge-value {
   font-family: var(--font-mono);
-  font-size: 20px;
-  font-weight: 500;
+  font-size: 22px;
+  font-weight: 600;
   text-align: center;
   margin-top: -4px;
 }
-
 .gauge-label {
   font-size: 12px;
   color: var(--text-secondary);
   text-align: center;
 }
-
-/* ── Tabs ───────────────────────────────────────────────────── */
-.tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--border-medium);
-  margin-bottom: 16px;
-  overflow-x: auto;
+.gauge-phase {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: center;
 }
 
+/* ── Tabs ────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-medium);
+  margin-bottom: 20px;
+  overflow-x: auto;
+  gap: 0;
+}
 .tab-btn {
-  padding: 8px 16px;
+  padding: 9px 18px;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
   color: var(--text-secondary);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   transition: color var(--transition), border-color var(--transition);
   white-space: nowrap;
@@ -357,66 +341,70 @@ textarea.form-input {
   color: var(--text-primary);
   border-bottom-color: var(--color-info);
 }
-
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
-/* ── Alerts / Notices ───────────────────────────────────────── */
+/* ── Alerts ──────────────────────────────────────────────── */
 .alert {
-  padding: 10px 14px;
+  padding: 11px 15px;
   border-radius: var(--radius);
-  font-size: 13px;
+  font-size: 13.5px;
   border-left: 3px solid;
   margin-bottom: 12px;
 }
-.alert-info    { background: rgba(87,148,242,0.08); border-color: var(--color-info); color: var(--text-primary); }
-.alert-warning { background: rgba(255,152,48,0.08); border-color: var(--color-warning); color: var(--text-primary); }
-.alert-error   { background: rgba(242,73,92,0.08);  border-color: var(--color-negative); color: var(--text-primary); }
-.alert-success { background: rgba(115,191,105,0.08);border-color: var(--color-positive); color: var(--text-primary); }
+.alert-info    { background: rgba(87,148,242,0.08);  border-color: var(--color-info);     color: var(--text-primary); }
+.alert-warning { background: rgba(255,152,48,0.08);  border-color: var(--color-warning);  color: var(--text-primary); }
+.alert-error   { background: rgba(242,73,92,0.08);   border-color: var(--color-negative); color: var(--text-primary); }
+.alert-success { background: rgba(115,191,105,0.08); border-color: var(--color-positive); color: var(--text-primary); }
 
-/* ── Section header ─────────────────────────────────────────── */
+/* ── Section header ──────────────────────────────────────── */
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 8px;
 }
+.section-title    { font-size: 22px; font-weight: 700; color: var(--text-primary); }
+.section-subtitle { font-size: 13.5px; color: var(--text-secondary); margin-top: 2px; }
 
-.section-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.section-subtitle {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-
-/* ── Stat row ───────────────────────────────────────────────── */
+/* ── Stat row ────────────────────────────────────────────── */
 .stat-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
+  padding: 7px 0;
   border-bottom: 1px solid var(--border-weak);
-  font-size: 13px;
+  font-size: 13.5px;
 }
 .stat-row:last-child { border-bottom: none; }
 .stat-row .stat-label { color: var(--text-secondary); }
 .stat-row .stat-value { font-family: var(--font-mono); font-weight: 500; }
 
-/* ── INR secondary display ──────────────────────────────────── */
+/* ── INR secondary display ───────────────────────────────── */
 .inr-secondary {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
-/* ── Slider ─────────────────────────────────────────────────── */
+/* ── Deduction waterfall ─────────────────────────────────── */
+.deduction-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13.5px;
+  border-bottom: 1px solid var(--border-weak);
+}
+.deduction-row:last-child { border-bottom: none; border-top: 1px solid var(--border-medium); font-weight: 600; }
+.deduction-row .ded-label { flex: 1; color: var(--text-secondary); }
+.deduction-row .ded-value { font-family: var(--font-mono); }
+.deduction-row .ded-minus { color: var(--color-negative); font-family: var(--font-mono); }
+.deduction-row .ded-plus  { color: var(--color-positive); font-family: var(--font-mono); }
+
+/* ── Slider ──────────────────────────────────────────────── */
 .range-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -429,28 +417,24 @@ textarea.form-input {
 }
 .range-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 16px; height: 16px;
   border-radius: 50%;
   background: var(--color-info);
   cursor: pointer;
 }
 .range-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 16px; height: 16px;
   border-radius: 50%;
   background: var(--color-info);
-  border: none;
-  cursor: pointer;
+  border: none; cursor: pointer;
 }
 
-/* ── Calendar grid (Tax tracker) ────────────────────────────── */
+/* ── Calendar grid ───────────────────────────────────────── */
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 6px;
 }
-
 .cal-cell {
   aspect-ratio: 1;
   display: flex;
@@ -468,7 +452,6 @@ textarea.form-input {
   user-select: none;
   min-height: 52px;
 }
-
 .cal-cell:hover { border-color: var(--border-strong); color: var(--text-primary); }
 .cal-cell.verified {
   background: rgba(115,191,105,0.12);
@@ -478,51 +461,27 @@ textarea.form-input {
 .cal-cell .cal-month { font-size: 10px; }
 .cal-cell .cal-check { font-size: 14px; }
 
-/* ── Amortisation table show-all toggle ─────────────────────── */
+/* ── Amortisation table ──────────────────────────────────── */
 .amort-hidden { display: none; }
 .amort-hidden.visible { display: table-row; }
 
-/* ── ULIP card ──────────────────────────────────────────────── */
+/* ── ULIP card ───────────────────────────────────────────── */
 .ulip-card {
   background: var(--bg-panel);
   border: 1px solid var(--border-weak);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 20px;
 }
-
 .ulip-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
+.ulip-name    { font-weight: 600; font-size: 15px; }
+.ulip-insurer { font-size: 12.5px; color: var(--text-secondary); }
 
-.ulip-name {
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.ulip-insurer {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-/* ── Deduction waterfall ────────────────────────────────────── */
-.deduction-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 0;
-  font-size: 13px;
-  border-bottom: 1px solid var(--border-weak);
-}
-.deduction-row:last-child { border-bottom: none; border-top: 1px solid var(--border-medium); font-weight: 500; }
-.deduction-row .ded-label { flex: 1; color: var(--text-secondary); }
-.deduction-row .ded-value { font-family: var(--font-mono); }
-.deduction-row .ded-minus { color: var(--color-negative); font-family: var(--font-mono); }
-.deduction-row .ded-plus  { color: var(--color-positive); font-family: var(--font-mono); }
-
-/* ── Scheduled changes badge ────────────────────────────────── */
+/* ── Change badge ────────────────────────────────────────── */
 .change-badge {
   display: inline-flex;
   align-items: center;
@@ -535,15 +494,15 @@ textarea.form-input {
   cursor: help;
 }
 
-/* ── Empty state ────────────────────────────────────────────── */
+/* ── Empty state ─────────────────────────────────────────── */
 .empty-state {
   text-align: center;
-  padding: 32px 16px;
+  padding: 40px 20px;
   color: var(--text-muted);
 }
-.empty-state svg { margin-bottom: 8px; opacity: 0.4; }
+.empty-state svg { margin-bottom: 10px; opacity: 0.35; }
 
-/* ── Login page ─────────────────────────────────────────────── */
+/* ── Login page ──────────────────────────────────────────── */
 .login-wrap {
   min-height: 100vh;
   display: flex;
@@ -552,146 +511,81 @@ textarea.form-input {
   background: var(--bg-canvas);
   padding: 20px;
 }
-
 .login-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
-  padding: 36px 32px;
+  padding: 48px 44px;
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 24px 64px rgba(0,0,0,0.5);
 }
-
 .login-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 24px;
+  gap: 12px;
+  margin-bottom: 28px;
 }
-
-.login-logo-icon {
-  width: 32px;
-  height: 32px;
-  color: var(--color-info);
-}
-
-.login-logo-text {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.login-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.login-subtitle {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-bottom: 24px;
-}
-
-.login-form { display: flex; flex-direction: column; gap: 16px; }
-.login-form .form-input { font-family: var(--font-body); font-size: 14px; padding: 10px 12px; }
+.login-logo-icon  { width: 40px; height: 40px; color: var(--color-info); }
+.login-logo-text  { font-size: 20px; font-weight: 700; color: var(--text-primary); }
+.login-title      { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.login-subtitle   { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 28px; }
+.login-form       { display: flex; flex-direction: column; gap: 18px; }
+.login-form .form-input { font-family: var(--font-body); font-size: 15px; padding: 12px 14px; }
 
 .login-error {
-  background: rgba(242,73,92,0.1);
+  background: rgba(242,73,92,0.08);
   border: 1px solid rgba(242,73,92,0.3);
   border-radius: var(--radius);
-  padding: 10px 12px;
-  font-size: 13px;
+  padding: 10px 14px;
+  font-size: 13.5px;
   color: var(--color-negative);
 }
 
-.lockout-timer {
-  text-align: center;
-  padding: 12px;
-  background: rgba(255,152,48,0.08);
-  border: 1px solid rgba(255,152,48,0.3);
-  border-radius: var(--radius);
-  color: var(--color-warning);
-  font-family: var(--font-mono);
-  font-size: 14px;
-}
-
-/* ── Tooltip ────────────────────────────────────────────────── */
-[title] { cursor: help; }
-
-/* ── Overlay ────────────────────────────────────────────────── */
-.overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 300;
-}
-.overlay.open { display: block; }
-
-/* ── Spinner ────────────────────────────────────────────────── */
+/* ── Spinner ─────────────────────────────────────────────── */
 .spinner {
-  width: 20px;
-  height: 20px;
+  width: 18px; height: 18px;
   border: 2px solid var(--border-medium);
   border-top-color: var(--color-info);
   border-radius: 50%;
-  animation: spin 0.6s linear infinite;
+  animation: spin 0.55s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Section PDF export button ──────────────────────────────── */
-.pdf-btn {
-  position: absolute;
-  top: 0;
-  right: 0;
-}
+/* ── Overlay ─────────────────────────────────────────────── */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; }
+.overlay.open { display: block; }
 
-/* ── Highlight row ──────────────────────────────────────────── */
-.highlight-row { background: rgba(87,148,242,0.06); }
-
-/* ── Net worth gauge colors ─────────────────────────────────── */
-.gauge-negative .gauge-value { color: var(--color-negative); }
-.gauge-positive .gauge-value { color: var(--color-positive); }
-.gauge-warning  .gauge-value { color: var(--color-warning); }
-
-/* ── Chart legend ───────────────────────────────────────────── */
+/* ── Chart legend ────────────────────────────────────────── */
 .chart-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 8px;
-  font-size: 12px;
+  margin-top: 10px;
+  font-size: 12.5px;
 }
-
 .legend-item {
   display: flex;
   align-items: center;
   gap: 5px;
   color: var(--text-secondary);
 }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
-.legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* ── Comparison table ───────────────────────────────────────── */
-.compare-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-.compare-table th, .compare-table td {
-  padding: 8px 12px;
-  text-align: right;
-  border-bottom: 1px solid var(--border-weak);
-}
+/* ── Compare table ───────────────────────────────────────── */
+.compare-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.compare-table th, .compare-table td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--border-weak); }
 .compare-table th:first-child, .compare-table td:first-child { text-align: left; }
-.compare-table th { font-size: 11px; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; border-bottom: 1px solid var(--border-medium); }
+.compare-table th { font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; border-bottom-color: var(--border-medium); }
 .compare-table td { font-family: var(--font-mono); }
 .compare-table tr.current-row td { background: rgba(87,148,242,0.06); font-weight: 600; }
 .compare-table tr.best-row td { color: var(--color-positive); }
+
+/* ── Highlight row ───────────────────────────────────────── */
+.highlight-row { background: rgba(87,148,242,0.06); }
+
+/* ── Gauge colour helpers ────────────────────────────────── */
+.gauge-negative .gauge-value { color: var(--color-negative); }
+.gauge-positive .gauge-value { color: var(--color-positive); }
+.gauge-warning  .gauge-value { color: var(--color-warning); }
+.gauge-info     .gauge-value { color: var(--color-info); }

@@ -1,0 +1,17 @@
+# ── Credential files — NEVER commit ─────────────────────────
+js/auth-config.js
+keygen.html
+
+# ── Personal data templates (future) ────────────────────────
+js/defaults.personal.js
+*.local.js
+
+# ── OS / editor ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+*~
+
+# ── Temp ─────────────────────────────────────────────────────
+*.tmp

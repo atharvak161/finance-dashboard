@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance Dashboard — Net Worth</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <div class="content page-content" id="content">
+
+      <div class="section-header">
+        <div>
+          <div class="section-title">Net Worth Timeline</div>
+          <div class="section-subtitle">5-year projection</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Projection Settings</span></div>
+          <div id="nw-settings-fields"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Wealth Target Scenarios</span></div>
+          <div id="nw-scenarios"></div>
+        </div>
+      </div>
+
+      <div class="panel mt-20">
+        <div class="panel-header"><span class="panel-title">Assets vs Liabilities vs Net Worth</span></div>
+        <div class="chart-wrap chart-h-360"><canvas id="chart-nw-timeline"></canvas></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script type="module" src="js/pages/networth.js"></script>
+</body>
+</html>
