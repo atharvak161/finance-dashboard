@@ -80,7 +80,7 @@
               </button>
             </div>
           </div>
-          <div id="setup-error" class="login-error" style="display:none"></div>
+          <div id="setup-error" style="display:none;background:#f2495c;color:#fff;font-size:13px;font-weight:600;padding:10px 14px;border-radius:6px;margin-top:4px"></div>
           <button type="submit" class="btn btn-primary btn-full" id="setup-btn">
             <span id="setup-btn-text">Set password &amp; enter</span>
             <div class="spinner" id="setup-spinner" style="display:none;width:16px;height:16px;margin-left:6px;"></div>
@@ -140,7 +140,9 @@
       return new Promise((res, rej) => {
         if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
         const s = document.createElement('script');
-        s.src = src; s.onload = res; s.onerror = rej;
+        s.src = src;
+        s.onload = res;
+        s.onerror = () => rej(new Error('Failed to load: ' + src.split('/').slice(-3).join('/')));
         document.head.appendChild(s);
       });
     }
@@ -313,7 +315,8 @@
         btnText.textContent = 'Loading dashboard...';
         await transitionToDashboard();
       } catch(err) {
-        showError(setupError, err.message);
+        const msg = err?.message || err?.type || String(err) || 'Unknown error';
+        showError(setupError, msg);
         btnText.textContent = 'Set password & enter';
         setLoading(btnText, spinner, false);
       }
