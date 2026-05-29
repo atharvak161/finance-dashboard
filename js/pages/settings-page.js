@@ -67,6 +67,7 @@ function renderTab(tab) {
     case 'tax':         renderTaxSettings(content); break;
     case 'display':     renderDisplay(content);     break;
     case 'data':        renderData(content);        break;
+    case 'charts':      renderChartParams(content); break;
   }
 }
 
@@ -209,6 +210,44 @@ function renderDisplay(content) {
       ${field('Show INR equivalents',        'checkbox', s.showInrEquivalents,        v=>{s.showInrEquivalents=v; autoSave('fin_settings',s);})}
     </div>
   </div>`;
+}
+
+function renderChartParams(content) {
+  const cp = state.settings?.chartParams || {};
+  const at = cp.ageTrajectory || {};
+  const bg = cp.budgetByCategory || {};
+  const cg = cp.compoundGrowth || {};
+  const CATS = ['Housing','Debt','Insurance','Phone','Transport','Subscription','Food','Personal','Travel','Other'];
+
+  const ensureCp = () => {
+    if (!state.settings.chartParams) state.settings.chartParams = {};
+  };
+
+  content.innerHTML = `
+    <div class="panel">
+      <div class="panel-title" style="margin-bottom:20px">Age Trajectory Chart</div>
+      <div class="grid-2">
+        ${field('Current age',                      'number', at.currentAge||25,                    v=>{ensureCp();if(!state.settings.chartParams.ageTrajectory)state.settings.chartParams.ageTrajectory={};state.settings.chartParams.ageTrajectory.currentAge=v;                          autoSave('fin_settings',state.settings);})}
+        ${field('Target age',                       'number', at.targetAge||50,                     v=>{ensureCp();if(!state.settings.chartParams.ageTrajectory)state.settings.chartParams.ageTrajectory={};state.settings.chartParams.ageTrajectory.targetAge=v;                           autoSave('fin_settings',state.settings);})}
+        ${field('Growth rate (%/yr)',               'number', at.growthRatePercent||10,             v=>{ensureCp();if(!state.settings.chartParams.ageTrajectory)state.settings.chartParams.ageTrajectory={};state.settings.chartParams.ageTrajectory.growthRatePercent=v;                  autoSave('fin_settings',state.settings);})}
+        ${field('Career transition age',            'number', at.careerTransitionAge||28,           v=>{ensureCp();if(!state.settings.chartParams.ageTrajectory)state.settings.chartParams.ageTrajectory={};state.settings.chartParams.ageTrajectory.careerTransitionAge=v;                autoSave('fin_settings',state.settings);})}
+        ${field('Post-transition surplus (£/mo)',   'number', at.careerTransitionMonthlySurplus||860,v=>{ensureCp();if(!state.settings.chartParams.ageTrajectory)state.settings.chartParams.ageTrajectory={};state.settings.chartParams.ageTrajectory.careerTransitionMonthlySurplus=v;   autoSave('fin_settings',state.settings);})}
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-title" style="margin-bottom:20px">Budget by Category (£/mo)</div>
+      <div class="grid-2">
+        ${CATS.map(cat => field(cat, 'number', bg[cat]??0, v=>{ensureCp();if(!state.settings.chartParams.budgetByCategory)state.settings.chartParams.budgetByCategory={};state.settings.chartParams.budgetByCategory[cat]=v;autoSave('fin_settings',state.settings);})).join('')}
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-title" style="margin-bottom:20px">Compound Growth Projector</div>
+      <div class="grid-2">
+        ${field('Monthly amount (£)', 'number', cg.monthlyAmount||217, v=>{ensureCp();if(!state.settings.chartParams.compoundGrowth)state.settings.chartParams.compoundGrowth={};state.settings.chartParams.compoundGrowth.monthlyAmount=v; autoSave('fin_settings',state.settings);})}
+        ${field('Annual rate (%)',    'number', cg.ratePercent||10,     v=>{ensureCp();if(!state.settings.chartParams.compoundGrowth)state.settings.chartParams.compoundGrowth={};state.settings.chartParams.compoundGrowth.ratePercent=v;    autoSave('fin_settings',state.settings);})}
+        ${field('Years',             'number', cg.years||25,           v=>{ensureCp();if(!state.settings.chartParams.compoundGrowth)state.settings.chartParams.compoundGrowth={};state.settings.chartParams.compoundGrowth.years=v;          autoSave('fin_settings',state.settings);})}
+      </div>
+    </div>`;
 }
 
 function renderData(content) {
