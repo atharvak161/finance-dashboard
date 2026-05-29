@@ -151,7 +151,7 @@ export const DEFAULTS = {
   ],
 
   fin_settings: {
-    inactivityTimeoutMinutes: 15,
+    inactivityTimeoutMinutes: 60,
     theme: 'dark',
     inrGbpRate: 125,
     showInrEquivalents: true,
