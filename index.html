@@ -79,10 +79,51 @@
     import { isFirstRun, setupPassword, login, checkLockout, getEncKey } from './js/auth.js';
     import { initializeDefaults } from './js/store.js';
 
-    // Always clear stale session flag on login page load.
-    // The encryption key lives in memory only — it's gone on every page load,
-    // so the user must always re-enter their password.
+    // Always clear stale session on fresh load — enc key is memory-only.
     sessionStorage.removeItem('session_active');
+
+    // ── Load CDN script helper ───────────────────────────────
+    function loadScript(src) {
+      return new Promise((res, rej) => {
+        if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+        const s = document.createElement('script');
+        s.src = src; s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+
+    // ── Transition to dashboard IN THE SAME PAGE ─────────────
+    // We never navigate away — that would destroy the in-memory enc key.
+    // Instead: load CDN scripts, fetch dashboard.html body, inject it,
+    // then dynamically import ui.js (shares the same auth.js module
+    // instance, so _encKey is still set).
+    async function transitionToDashboard() {
+      // Add layout CSS (not loaded on login page)
+      if (!document.querySelector('link[href="css/layout.css"]')) {
+        const l = document.createElement('link');
+        l.rel = 'stylesheet'; l.href = 'css/layout.css';
+        document.head.appendChild(l);
+      }
+
+      // Load CDN scripts sequentially
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js');
+      await loadScript('https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+      await loadScript('https://cdn.jsdelivr.net/npm/lucide@0.263.1/dist/umd/lucide.min.js');
+
+      // Fetch dashboard template and inject its body
+      const resp = await fetch('dashboard.html');
+      const html = await resp.text();
+      const doc  = new DOMParser().parseFromString(html, 'text/html');
+      document.body.innerHTML = doc.body.innerHTML;
+      // Strip any <script> tags injected via innerHTML (they don't run anyway)
+      document.body.querySelectorAll('script').forEach(s => s.remove());
+
+      // Import ui.js — it shares the same auth.js module instance,
+      // so getEncKey() returns the key that was set during login above.
+      await import('./js/ui.js');
+    }
 
     const setupPanel  = document.getElementById('setup-panel');
     const loginPanel  = document.getElementById('login-panel');
@@ -160,7 +201,8 @@
       try {
         await setupPassword(pwd);
         await initializeDefaults(getEncKey());
-        window.location.replace('dashboard.html');
+        btnText.textContent = 'Loading dashboard...';
+        await transitionToDashboard();
       } catch(err) {
         showError(setupError, err.message);
         btnText.textContent = 'Set password & enter';
@@ -181,7 +223,8 @@
 
       try {
         await login(pwd);
-        window.location.replace('dashboard.html');
+        btnText.textContent = 'Loading dashboard...';
+        await transitionToDashboard();
       } catch(err) {
         showError(loginError, err.message);
         btnText.textContent = 'Unlock dashboard';
