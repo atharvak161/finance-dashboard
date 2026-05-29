@@ -13,6 +13,16 @@
     .strength-bar { height: 3px; border-radius: 2px; background: var(--bg-input); margin-top: 4px; }
     .strength-fill { height: 100%; border-radius: 2px; transition: width 0.2s, background 0.2s; }
     .lock-icon { width: 40px; height: 40px; color: var(--color-warning); margin: 0 auto 8px; display: block; }
+    .pwd-wrap { position: relative; }
+    .pwd-wrap .form-input { padding-right: 40px; }
+    .pwd-eye {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: var(--text-muted);
+      padding: 2px; display: flex; align-items: center;
+      transition: color 0.15s;
+    }
+    .pwd-eye:hover { color: var(--text-primary); }
+    .pwd-eye svg { width: 16px; height: 16px; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -32,12 +42,22 @@
         <form class="login-form" id="setup-form" autocomplete="off">
           <div class="form-group">
             <label class="form-label">New password (min. 6 characters)</label>
-            <input type="password" id="setup-pwd" class="form-input" placeholder="Enter password" autocomplete="new-password" required minlength="6" />
+            <div class="pwd-wrap">
+              <input type="password" id="setup-pwd" class="form-input" placeholder="Enter password" autocomplete="new-password" required minlength="6" />
+              <button type="button" class="pwd-eye" data-target="setup-pwd" tabindex="-1" aria-label="Show password">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
             <div class="strength-bar"><div class="strength-fill" id="strength-fill" style="width:0%"></div></div>
           </div>
           <div class="form-group">
             <label class="form-label">Confirm password</label>
-            <input type="password" id="setup-confirm" class="form-input" placeholder="Confirm password" autocomplete="new-password" required />
+            <div class="pwd-wrap">
+              <input type="password" id="setup-confirm" class="form-input" placeholder="Confirm password" autocomplete="new-password" required />
+              <button type="button" class="pwd-eye" data-target="setup-confirm" tabindex="-1" aria-label="Show password">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
           </div>
           <div id="setup-error" class="login-error" style="display:none"></div>
           <button type="submit" class="btn btn-primary btn-full" id="setup-btn">
@@ -62,7 +82,12 @@
           <div id="login-fields">
             <div class="form-group">
               <label class="form-label">Password</label>
-              <input type="password" id="login-pwd" class="form-input" placeholder="Enter password" autocomplete="current-password" required />
+              <div class="pwd-wrap">
+                <input type="password" id="login-pwd" class="form-input" placeholder="Enter password" autocomplete="current-password" required />
+                <button type="button" class="pwd-eye" data-target="login-pwd" tabindex="-1" aria-label="Show password">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
             </div>
             <div id="login-error" class="login-error" style="display:none"></div>
             <button type="submit" class="btn btn-primary btn-full" id="login-btn">
@@ -143,6 +168,20 @@
       btnText.parentElement.disabled = state;
       spinner.style.display = state ? 'inline-block' : 'none';
     }
+
+    // ── Eye toggle (show/hide password)
+    const EYE_OPEN  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    const EYE_CLOSED = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+
+    document.querySelectorAll('.pwd-eye').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target);
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        btn.innerHTML = isHidden ? EYE_CLOSED : EYE_OPEN;
+        btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+      });
+    });
 
     // ── Password strength indicator
     document.getElementById('setup-pwd').addEventListener('input', e => {
