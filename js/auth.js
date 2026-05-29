@@ -1,8 +1,15 @@
 // Authentication — validates against pre-computed credential hashes.
 // Password and username are NEVER stored in plaintext anywhere.
-// Hashes live in auth-config.js (gitignored, never committed).
+// Only PBKDF2+SHA256 hashes are present below — the raw password cannot
+// be recovered from these values (600k-iteration PBKDF2 + 28-char password).
 
-import { CRED } from './auth-config.js';
+const CRED = {
+  authSalt: 'rREAlvlrl2v+s3UA3tqG8w==',
+  authHash: 'rte+/usAJSLPVmN7AEiVoDsv9zMGcO+OqmMvjOGiDUc=',
+  encSalt:  'qcHklLnb/O1MFrsXfJnY3Q==',
+  userSalt: 'RU9ik40TZv5n7apkPS2Cfw==',
+  userHash: 'awO/ci+YBv16iPurlztDo9HQHIejyBtPCwg8a0xgpaA=',
+};
 
 const ITERATIONS = 600_000;
 
