@@ -44,7 +44,7 @@ export async function initPage(activeNav) {
   document.documentElement.style.setProperty('--inr-gbp-rate', rate);
 
   // ── 6. Inactivity timer ──────────────────────────────────
-  const timeoutMs = ((state.settings?.inactivityTimeoutMinutes || 15) * 60 * 1000);
+  const timeoutMs = (Math.max(60, state.settings?.inactivityTimeoutMinutes || 60) * 60 * 1000);
   const resetTimer = () => {
     clearTimeout(_inactivityTimer);
     _inactivityTimer = setTimeout(async () => {
