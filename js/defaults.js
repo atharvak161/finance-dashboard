@@ -16,7 +16,7 @@ export const DEFAULTS = {
     baseSalaryGBP: 28000,
     hoursPerWeek: 37.5,
     avgOvertimeGrossGBP: 275,
-    pensionEmployeeRate: 3,
+    pensionEmployeeRate: 4,
     pensionEmployerRate: 3,
     taxCode: '1034L',
     taxFreeAllowanceAnnual: 10348,
@@ -142,7 +142,7 @@ export const DEFAULTS = {
   },
 
   fin_monthly_log: [
-    { month: '2026-05', netGBP: 2243, savedGBP: 100,  note: 'Actual — May payslip' },
+    { month: '2026-05', netGBP: 2243.51, savedGBP: 100, note: 'Actual — May payslip. Salary £2,166.67 + OT £725. Tax £405.80, NI £147.49, Pension £94.87.' },
     { month: '2026-06', netGBP: 2331, savedGBP: 941,  note: 'Estimated' },
     { month: '2026-07', netGBP: 2128, savedGBP: 738,  note: 'Estimated' },
     { month: '2026-08', netGBP: 2009, savedGBP: 678,  note: 'Estimated' },
