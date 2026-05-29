@@ -79,10 +79,10 @@
     import { isFirstRun, setupPassword, login, checkLockout, getEncKey } from './js/auth.js';
     import { initializeDefaults } from './js/store.js';
 
-    // Redirect if already authenticated
-    if (sessionStorage.getItem('session_active') === 'true') {
-      window.location.replace('dashboard.html');
-    }
+    // Always clear stale session flag on login page load.
+    // The encryption key lives in memory only — it's gone on every page load,
+    // so the user must always re-enter their password.
+    sessionStorage.removeItem('session_active');
 
     const setupPanel  = document.getElementById('setup-panel');
     const loginPanel  = document.getElementById('login-panel');
