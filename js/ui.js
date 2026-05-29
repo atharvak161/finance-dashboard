@@ -653,7 +653,7 @@ function renderNetWorth() {
   const rate  = state.settings?.inrGbpRate || 125;
   const inc   = state.income || {};
   const inv   = state.investments || { cashAccounts:[], pensions:[], ulips:[] };
-  const dbt   = state.debts?.sbi || {};
+  const dbt   = state.debts || { sbi:{} };
   const goals = state.goals || {};
   const nw    = calculateNetWorth(inv, dbt, rate);
   const pay   = calculateNetPay(inc);
@@ -905,4 +905,12 @@ function escHtml(s) {
 
 // ── Start ────────────────────────────────────────────────────
 
-boot();
+boot().catch(err => {
+  console.error('Dashboard boot error:', err);
+  const main = document.querySelector('.main') || document.body;
+  main.innerHTML = `<div style="padding:48px;color:#f2495c;font-family:monospace;max-width:600px">
+    <p style="font-size:16px;font-weight:600;margin-bottom:8px">Dashboard failed to load</p>
+    <p style="font-size:12px;color:#8e9099;margin-bottom:16px">${err.message}</p>
+    <a href="index.html" style="color:#5794f2;font-size:13px">← Back to login</a>
+  </div>`;
+});
