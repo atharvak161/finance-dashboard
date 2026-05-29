@@ -15,12 +15,12 @@ import { initExport } from './export.js';
 
 // ── Auth guard ───────────────────────────────────────────────
 
-// If loaded via direct navigation to dashboard.html (not via transitionToDashboard),
-// the enc key is gone — redirect to login page.
+// If the enc key is gone (direct nav to dashboard.html, or page refresh),
+// redirect to login. This never triggers when loaded via transitionToDashboard()
+// because _encKey is set in the shared auth.js module at that point.
 if (!isAuthenticated()) {
   sessionStorage.removeItem('session_active');
-  // Use location.replace so the back button doesn't loop
-  window.location.replace(window.location.pathname.includes('dashboard') ? 'index.html' : window.location.href);
+  window.location.replace('index.html');
   throw new Error('Not authenticated');
 }
 
