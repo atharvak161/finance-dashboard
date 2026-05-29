@@ -319,3 +319,106 @@ export function fmtMonths(m) {
   if (mo === 0) return `${y}y`;
   return `${y}y ${mo}m`;
 }
+
+// ── Compound growth projection ───────────────────────────────
+
+export function compoundGrowthProjection(monthlyAmount, ratePercent, years) {
+  const r = ratePercent / 100 / 12;
+  const pts = [{ year: 0, value: 0 }];
+  let v = 0;
+  for (let y = 1; y <= years; y++) {
+    for (let m = 0; m < 12; m++) v = (v + monthlyAmount) * (1 + r);
+    pts.push({ year: y, value: Math.round(v) });
+  }
+  return pts;
+}
+
+// ── Age-based wealth trajectory ──────────────────────────────
+
+export function ageWealthTrajectory(params) {
+  const { currentAge, targetAge, startNetWorth, monthlySurplus,
+          growthRatePercent, careerTransitionAge, careerTransitionSurplus } = params;
+  const r = (growthRatePercent || 7) / 100 / 12;
+  const pts = [{ age: currentAge, netWorth: Math.round(startNetWorth) }];
+  let nw = startNetWorth;
+  for (let y = 1; y <= targetAge - currentAge; y++) {
+    const age = currentAge + y;
+    const monthly = (careerTransitionAge && age > careerTransitionAge && careerTransitionSurplus)
+      ? careerTransitionSurplus : monthlySurplus;
+    for (let m = 0; m < 12; m++) nw = nw * (1 + r) + monthly;
+    pts.push({ age, netWorth: Math.round(nw) });
+  }
+  return pts;
+}
+
+// ── Emergency fund runway in months ─────────────────────────
+
+export function emergencyRunwayMonths(cashBalanceGBP, monthlyExpensesGBP) {
+  if (!monthlyExpensesGBP) return 0;
+  return round2(cashBalanceGBP / monthlyExpensesGBP);
+}
+
+// ── Surplus trajectory events from state ────────────────────
+
+export function surplusTrajectoryEvents(state) {
+  const inc = state.income || {};
+  const exp = state.expenses || { items: [], scheduledChanges: [] };
+  const tt  = state.taxTracker || {};
+  const nwp = state.settings?.nwProjection || {};
+  const today = new Date().toISOString().slice(0, 10);
+
+  const basePay  = calculateNetPay(inc);
+  const baseExp  = totalExpenses(applyScheduledChanges(exp));
+  let   running  = round2(basePay.netWithOT - baseExp);
+
+  const events = [{ date: today, surplus: running, label: 'Now', detail: '' }];
+
+  // Scheduled expense changes (future only)
+  const future = (exp.scheduledChanges || [])
+    .filter(c => c.changeDate > today)
+    .sort((a, b) => a.changeDate.localeCompare(b.changeDate));
+
+  for (const c of future) {
+    const item = exp.items.find(i => i.id === c.expenseId);
+    const diff = round2((item?.monthlyGBP || 0) - c.newMonthlyGBP);
+    running = round2(running + diff);
+    events.push({ date: c.changeDate, surplus: running,
+      label: item?.name || c.expenseId,
+      detail: `${item?.name}: £${item?.monthlyGBP}→£${c.newMonthlyGBP} (+£${diff})` });
+  }
+
+  // Tax code normalises
+  if (tt.endDate > today) {
+    const bump = tt.monthlyDeduction || 38;
+    running = round2(running + bump);
+    events.push({ date: tt.endDate, surplus: running,
+      label: 'Tax code normalises', detail: `1034L clears +£${bump}/mo` });
+  }
+
+  // Career transition
+  if (nwp.careerTransitionDate > today && nwp.newSalaryGBP) {
+    const newPay = calculateNetPay({ ...inc, baseSalaryGBP: nwp.newSalaryGBP, avgOvertimeGrossGBP: 0 });
+    const newSurplus = round2(newPay.netBase - baseExp);
+    events.push({ date: nwp.careerTransitionDate, surplus: newSurplus,
+      label: 'Career transition', detail: `Salary £${Number(nwp.newSalaryGBP).toLocaleString()}` });
+  }
+
+  return events.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// ── Cumulative interest + principal paid from loan start ─────
+
+export function loanPaidToDate(sbi) {
+  if (!sbi?.startDate || !sbi?.outstandingINR) return { interestPaid: 0, principalPaid: 0 };
+  const start     = new Date(sbi.startDate);
+  const today     = new Date();
+  const monthsIn  = Math.max(0, (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth()));
+  const sanctioned = 3600000; // ₹36L original
+  const fullSched  = generateAmortisation(sanctioned, sbi.ratePercent || 9.9, sbi.emiINR || 34090, 0);
+  const paid = fullSched.slice(0, monthsIn);
+  return {
+    interestPaid:  paid.reduce((s, r) => s + r.interest,  0),
+    principalPaid: paid.reduce((s, r) => s + r.principal, 0),
+    remaining:     sbi.outstandingINR || 0,
+  };
+}

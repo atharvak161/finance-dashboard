@@ -57,6 +57,7 @@ function render(st) {
       }).join('')}
     </tbody></table>`;
 
+  renderExpenseHeatmap(expenses);
   renderCharts(expenses, effItems);
 
   // Add expense button
@@ -118,6 +119,56 @@ function bindExpenseEvents(st) {
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Expense Heatmap ───────────────────────────────────────────
+
+function renderExpenseHeatmap(expenses) {
+  const container = document.getElementById('expense-heatmap');
+  if (!container) return;
+
+  const today = new Date();
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    return {
+      label: d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }),
+      dateStr: d.toISOString().slice(0, 10),
+    };
+  });
+
+  const cats = [...new Set(expenses.items.filter(i => i.active).map(i => i.category))].sort();
+
+  const grid = {};
+  for (const cat of cats) {
+    grid[cat] = months.map(({ dateStr }) => {
+      const items = expenses.items.filter(i => i.active && i.category === cat);
+      return items.reduce((s, item) => {
+        const sc = (expenses.scheduledChanges || []).find(c => c.expenseId === item.id && c.changeDate <= dateStr);
+        return s + (sc ? sc.newMonthlyGBP : item.monthlyGBP);
+      }, 0);
+    });
+  }
+
+  const maxByCat = {};
+  for (const cat of cats) maxByCat[cat] = Math.max(...grid[cat]);
+
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:var(--font-mono)">';
+  html += '<tr><th style="text-align:left;padding:4px 8px;color:var(--text-secondary);white-space:nowrap">Category</th>';
+  for (const m of months) html += `<th style="padding:4px 6px;color:var(--text-secondary);min-width:52px">${m.label}</th>`;
+  html += '</tr>';
+
+  for (const cat of cats) {
+    html += `<tr><td style="padding:4px 8px;color:var(--text-secondary);white-space:nowrap">${cat}</td>`;
+    for (let i = 0; i < months.length; i++) {
+      const val = grid[cat][i];
+      const opacity = maxByCat[cat] > 0 ? 0.15 + (val / maxByCat[cat]) * 0.7 : 0;
+      const changed = i > 0 && grid[cat][i] !== grid[cat][i - 1];
+      html += `<td style="padding:3px 6px;text-align:right;background:rgba(87,148,242,${opacity.toFixed(2)});border-radius:3px;${changed ? 'outline:1px solid rgba(87,148,242,0.5)' : ''}">${val > 0 ? '£' + Math.round(val) : '—'}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+  container.innerHTML = html;
 }
 
 // ── Charts ─────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ import { initPage }  from '../page-init.js';
 import { save }      from '../store.js';
 import {
   generateAmortisation, amortPayoffDate, amortInterestSaved, amortMonthsSaved,
+  loanPaidToDate, calculateNetPay, applyScheduledChanges, totalExpenses, calculateSurplus,
   fmtGBP, fmtINR, fmtMonths, round2
 } from '../calc.js';
 
@@ -97,6 +98,8 @@ function render(st) {
   };
 
   renderDebtCharts(sbi);
+  renderInterestPrincipalDonut(st);
+  renderDebtRaceChart(st);
 }
 
 function updateSimulator(sbi, extra) {
@@ -156,6 +159,105 @@ function dField(label, key, value) {
 // ── Charts ─────────────────────────────────────────────────────
 
 function getCtx(id) { if(charts[id]){charts[id].destroy();delete charts[id];}return document.getElementById(id)?.getContext('2d')||null; }
+
+// ── Interest vs Principal Paid to Date Donut ──────────────────
+
+function renderInterestPrincipalDonut(st) {
+  const sbi  = st.debts?.sbi || {};
+  const rate = st.settings?.inrGbpRate || 125;
+  const paid = loanPaidToDate(sbi);
+  const intGBP  = round2(paid.interestPaid / rate);
+  const prinGBP = round2(paid.principalPaid / rate);
+  const remGBP  = round2((paid.remaining || 0) / rate);
+
+  const statsEl = document.getElementById('loan-paid-stats');
+  if (statsEl) {
+    statsEl.innerHTML = `
+      <div class="stat-row"><span class="stat-label">Interest paid to date</span><span class="stat-value mono text-negative">${fmtINR(paid.interestPaid)} (${fmtGBP(intGBP)})</span></div>
+      <div class="stat-row"><span class="stat-label">Principal paid to date</span><span class="stat-value mono text-positive">${fmtINR(paid.principalPaid)} (${fmtGBP(prinGBP)})</span></div>
+      <div class="stat-row"><span class="stat-label">Remaining balance</span><span class="stat-value mono text-negative">${fmtINR(paid.remaining)} (${fmtGBP(remGBP)})</span></div>`;
+  }
+
+  const ctx = getCtx('chart-interest-principal');
+  if (!ctx) return;
+  charts['chart-interest-principal'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Interest Paid', 'Principal Paid', 'Remaining'],
+      datasets: [{ data: [intGBP, prinGBP, remGBP], backgroundColor: [C.negative + 'cc', C.positive + 'cc', '#5c6170cc'], borderWidth: 0, hoverOffset: 6 }],
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
+      animation: { animateRotate: true, animateScale: true, duration: 900, easing: 'easeInOutBack' },
+      plugins: { legend: { display: true, labels: { color: C.tick, boxWidth: 10, font: { size: 11 } } },
+        tooltip: { backgroundColor: '#252830', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#d9dde2', bodyColor: '#8e9099', padding: 10,
+          callbacks: { label: c => ` £${Math.round(c.raw).toLocaleString()} — ${c.label}` } } },
+    },
+  });
+}
+
+// ── Debt vs Assets Race ───────────────────────────────────────
+
+function renderDebtRaceChart(st) {
+  const ctx = getCtx('chart-debt-race');
+  if (!ctx) return;
+  const sbi    = st.debts?.sbi || {};
+  const rate   = st.settings?.inrGbpRate || 125;
+  const inv    = st.investments || { cashAccounts: [], pensions: [], ulips: [] };
+  const inc    = st.income || {};
+  const pay    = calculateNetPay(inc);
+  const eff    = applyScheduledChanges(st.expenses || { items: [], scheduledChanges: [] });
+  const surplus= calculateSurplus(pay.netWithOT, totalExpenses(eff));
+
+  const cashTotal    = inv.cashAccounts.reduce((s, a) => s + (a.balanceGBP || 0), 0);
+  const pensionTotal = inv.pensions.reduce((s, p) => s + (p.valueGBP || 0), 0);
+  let currentAssets  = round2(cashTotal + pensionTotal);
+
+  const sch = generateAmortisation(sbi.outstandingINR || 0, sbi.ratePercent || 9.9, sbi.emiINR || 34090, sbi.extraMonthlyINR || 0);
+  const months = Math.min(sch.length, 120);
+  const step   = Math.max(1, Math.floor(months / 24));
+  const labels = [], debtLine = [], assetLine = [];
+
+  for (let m = 0; m <= months; m += step) {
+    labels.push(`M${m}`);
+    debtLine.push(round2((sch[m]?.closing || 0) / rate));
+    assetLine.push(round2(currentAssets + surplus * m));
+  }
+
+  // Find crossover
+  let crossoverLabel = null;
+  for (let i = 1; i < assetLine.length; i++) {
+    if (assetLine[i] >= debtLine[i] && assetLine[i-1] < debtLine[i-1]) {
+      crossoverLabel = labels[i];
+      break;
+    }
+  }
+
+  const base_ = { responsive: true, maintainAspectRatio: false, animation: { duration: 700, easing: 'easeInOutQuart' },
+    plugins: { legend: { display: true, labels: { color: C.tick, boxWidth: 10, font: { size: 11 } } }, tooltip: { backgroundColor: '#252830', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#d9dde2', bodyColor: '#8e9099', padding: 10 } },
+    scales: { x: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 } } },
+              y: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, callback: v => '£' + Math.round(v).toLocaleString() } } },
+  };
+
+  charts['chart-debt-race'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Debt (GBP)', data: debtLine, borderColor: C.negative, backgroundColor: C.negative + '22', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+      { label: 'Assets (GBP)', data: assetLine, borderColor: C.positive, backgroundColor: C.positive + '11', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+    ]},
+    options: { ...base_,
+      plugins: { ...base_.plugins,
+        tooltip: { ...base_.plugins.tooltip,
+          callbacks: {
+            afterBody: (items) => {
+              const idx = items[0]?.dataIndex;
+              return (crossoverLabel && labels[idx] === crossoverLabel) ? ['*** Assets overtake Debt! ***'] : [];
+            }
+          }
+        }
+      }
+    },
+  });
+}
 
 function renderDebtCharts(sbi) {
   const sch    = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, 0);

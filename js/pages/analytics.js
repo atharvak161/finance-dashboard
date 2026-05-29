@@ -1,12 +1,15 @@
 import { initPage }  from '../page-init.js';
+import { save }      from '../store.js';
 import {
   calculateNetPay, calculateNetWorth, applyScheduledChanges, totalExpenses,
-  calculateSurplus, fmtGBP, fmtPct, round2
+  calculateSurplus, fmtGBP, fmtPct, round2,
+  surplusTrajectoryEvents, expensesByCategory
 } from '../calc.js';
 
 // Hoisted before top-level await
 const C = { positive:'#73bf69', negative:'#f2495c', warning:'#ff9830', info:'#5794f2', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
 let _chart = null;
+const charts = {};
 
 const state = await initPage('analytics');
 render(state);
@@ -104,6 +107,10 @@ function render(st) {
     </div>`;
 
   renderRatiosChart({ savingsRate, housingRatio, investRate, debtIncome });
+  renderSankey(st);
+  renderSavingsRateChart(st);
+  renderSurplusTrajectoryChart(st);
+  renderBudgetRadarChart(st);
 }
 
 function kpiCard(label, value, colorClass, sub) {
@@ -112,6 +119,207 @@ function kpiCard(label, value, colorClass, sub) {
 }
 
 // ── Chart ─────────────────────────────────────────────────────
+
+function getCtx(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  return document.getElementById(id)?.getContext('2d') || null;
+}
+
+// ── Sankey ────────────────────────────────────────────────────
+
+function renderSankey(st) {
+  const container = document.getElementById('sankey-container');
+  if (!container) return;
+
+  const pay = calculateNetPay(st.income || {});
+  const effItems = applyScheduledChanges(st.expenses || { items: [], scheduledChanges: [] });
+  const activeItems = effItems.filter(i => i.active);
+
+  const W = container.clientWidth || 900;
+  const H = 460;
+  const nodeW = 14;
+
+  const catColors = {
+    Housing:'#5794f2', Debt:'#f2495c', Insurance:'#73bf69', Phone:'#ff9830',
+    Transport:'#fade2a', Subscription:'#b877d9', Food:'#6ccf8e',
+    Personal:'#4dd0e1', Travel:'#ff7eb6', Other:'#8e9099', Savings:'#73bf69',
+  };
+
+  const gross = pay.grossWithOT;
+  const deductions = [
+    { label:'Income Tax', value:pay.incomeTax, color:'#f2495c' },
+    { label:'Nat. Insurance', value:pay.ni, color:'#ff9830' },
+    { label:'Pension', value:pay.pension, color:'#b877d9' },
+  ];
+  if (pay.extraTax > 0) deductions.push({ label:'Tax Underpay', value:pay.extraTax, color:'#fade2a' });
+  const net = pay.netWithOT;
+
+  const byCat = {};
+  for (const item of activeItems) byCat[item.category] = (byCat[item.category] || 0) + item.monthlyGBP;
+  const totalExp = Object.values(byCat).reduce((s, v) => s + v, 0);
+  const savings = Math.max(0, net - totalExp);
+
+  const expFlows = Object.entries(byCat)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, val]) => ({ label: cat, value: val, color: catColors[cat] || '#8e9099' }));
+  if (savings > 0) expFlows.push({ label: 'Savings', value: savings, color: '#73bf69' });
+
+  const usableH = H - 80;
+  const toH = v => Math.max(2, (v / gross) * usableH);
+
+  const x1 = 20;
+  const x2 = W * 0.42;
+  const x3 = W - 20;
+  const xDedLabel = W * 0.42 + 20;
+
+  const grossH = usableH;
+  const grossY = 40;
+
+  let dedCursor = grossY;
+  const dedNodes = deductions.map(d => {
+    const h = toH(d.value);
+    const y = dedCursor;
+    dedCursor += h + 3;
+    return { ...d, h, y };
+  });
+  const netH = toH(net);
+  const netY = dedCursor + 3;
+
+  let expCursor = netY;
+  const expNodes = expFlows.map(e => {
+    const h = toH(e.value);
+    const y = expCursor;
+    expCursor += h + 2;
+    return { ...e, h, y };
+  });
+
+  let svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:var(--font-mono)">`;
+
+  const flow = (x1n, y1n, h1, x2n, y2n, h2, color, opacity=0.45) => {
+    const mx = (x1n + x2n) / 2;
+    return `<path d="M${x1n},${y1n} C${mx},${y1n} ${mx},${y2n} ${x2n},${y2n} L${x2n},${y2n+h2} C${mx},${y2n+h2} ${mx},${y1n+h1} ${x1n},${y1n+h1} Z" fill="${color}" opacity="${opacity}"/>`;
+  };
+
+  let grossOut = grossY;
+  for (const d of dedNodes) {
+    svg += flow(x1 + nodeW, grossOut, d.h, x2 - nodeW, d.y, d.h, d.color);
+    grossOut += d.h + 3;
+  }
+  svg += flow(x1 + nodeW, grossOut, netH, x2 - nodeW, netY, netH, '#5794f2');
+
+  let netOut = netY;
+  for (const e of expNodes) {
+    svg += flow(x2 + nodeW, netOut, e.h, x3 - 140, e.y, e.h, e.color);
+    netOut += e.h + 2;
+  }
+
+  svg += `<rect x="${x1}" y="${grossY}" width="${nodeW}" height="${grossH}" fill="#d9dde2" rx="2"/>`;
+  svg += `<text x="${x1-4}" y="${grossY + grossH/2}" fill="#8e9099" font-size="10" text-anchor="end" dominant-baseline="middle">Gross</text>`;
+  svg += `<text x="${x1-4}" y="${grossY + grossH/2 + 12}" fill="#d9dde2" font-size="11" text-anchor="end" dominant-baseline="middle">£${Math.round(gross).toLocaleString()}</text>`;
+
+  for (const d of dedNodes) {
+    svg += `<rect x="${x2-nodeW}" y="${d.y}" width="${nodeW}" height="${d.h}" fill="${d.color}" rx="2"/>`;
+    svg += `<text x="${xDedLabel}" y="${d.y + d.h/2}" fill="${d.color}" font-size="10" dominant-baseline="middle">${d.label} £${Math.round(d.value).toLocaleString()}</text>`;
+  }
+
+  svg += `<rect x="${x2-nodeW}" y="${netY}" width="${nodeW*2}" height="${netH}" fill="#5794f2" rx="2"/>`;
+  svg += `<text x="${x2}" y="${netY + netH/2}" fill="#fff" font-size="10" text-anchor="middle" dominant-baseline="middle">Net £${Math.round(net).toLocaleString()}</text>`;
+
+  for (const e of expNodes) {
+    svg += `<rect x="${x3-140-nodeW}" y="${e.y}" width="${nodeW}" height="${e.h}" fill="${e.color}" rx="2"/>`;
+    const labelColor = e.label === 'Savings' ? '#73bf69' : '#d9dde2';
+    svg += `<text x="${x3-130}" y="${e.y + e.h/2}" fill="${labelColor}" font-size="10" dominant-baseline="middle">${e.label} £${Math.round(e.value).toLocaleString()}</text>`;
+  }
+
+  svg += '</svg>';
+  container.innerHTML = svg;
+}
+
+// ── Savings Rate Trend ────────────────────────────────────────
+
+function renderSavingsRateChart(st) {
+  const ctx = getCtx('chart-savings-rate');
+  if (!ctx) return;
+  const log = st.monthlyLog || [];
+  const labels = log.map(r => r.month);
+  const rates = log.map(r => r.netGBP > 0 ? round2((r.savedGBP / r.netGBP) * 100) : 0);
+  const benchmark = log.map(() => 20);
+  charts['chart-savings-rate'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Savings Rate %', data: rates, borderColor: C.positive, backgroundColor: C.positive + '22', fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2 },
+      { label: '20% Benchmark', data: benchmark, borderColor: C.warning, backgroundColor: 'transparent', borderDash: [5, 5], pointRadius: 0, borderWidth: 1.5 },
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 700, easing: 'easeInOutQuart' },
+      plugins: { legend: { display: true, labels: { color: C.tick, boxWidth: 10, font: { size: 11 } } }, tooltip: { backgroundColor: '#252830', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#d9dde2', bodyColor: '#8e9099', padding: 10 } },
+      scales: { x: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 } } },
+                y: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, callback: v => v + '%' }, min: 0, max: 50 } },
+    },
+  });
+}
+
+// ── Surplus Trajectory ────────────────────────────────────────
+
+function renderSurplusTrajectoryChart(st) {
+  const ctx = getCtx('chart-surplus-trajectory');
+  if (!ctx) return;
+  const events = surplusTrajectoryEvents(st);
+  const labels = events.map(e => e.date.slice(0, 7));
+  const data   = events.map(e => e.surplus);
+  const pointLabels = events.map(e => e.label);
+  charts['chart-surplus-trajectory'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: 'Monthly Surplus (£)',
+      data,
+      borderColor: C.info,
+      backgroundColor: C.info + '22',
+      fill: true,
+      stepped: 'before',
+      pointRadius: 6,
+      pointBackgroundColor: data.map(v => v >= 0 ? C.positive : C.negative),
+      borderWidth: 2,
+    }]},
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 700, easing: 'easeInOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#252830', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#d9dde2', bodyColor: '#8e9099', padding: 10,
+          callbacks: {
+            title: (items) => pointLabels[items[0].dataIndex] || labels[items[0].dataIndex],
+            label: (item) => ` £${item.raw.toFixed(0)} surplus`,
+            afterLabel: (item) => events[item.dataIndex].detail || '',
+          }
+        },
+      },
+      scales: { x: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 } } },
+                y: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, callback: v => '£' + v } } },
+    },
+  });
+}
+
+// ── Budget vs Actual Radar ────────────────────────────────────
+
+function renderBudgetRadarChart(st) {
+  const ctx = getCtx('chart-budget-radar');
+  if (!ctx) return;
+  const effItems = applyScheduledChanges(st.expenses || { items: [], scheduledChanges: [] });
+  const byCat = expensesByCategory(effItems);
+  const budgetMap = st.settings?.chartParams?.budgetByCategory || {};
+  const cats = Object.keys(byCat).filter(c => byCat[c] > 0);
+  const actual = cats.map(c => byCat[c] || 0);
+  const budget = cats.map(c => budgetMap[c] || byCat[c] || 0);
+  charts['chart-budget-radar'] = new Chart(ctx, {
+    type: 'radar',
+    data: { labels: cats, datasets: [
+      { label: 'Actual', data: actual, borderColor: C.negative, backgroundColor: C.negative + '33', pointBackgroundColor: C.negative, borderWidth: 2 },
+      { label: 'Budget', data: budget, borderColor: C.info, backgroundColor: C.info + '22', pointBackgroundColor: C.info, borderDash: [4, 4], borderWidth: 2 },
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 700 },
+      plugins: { legend: { display: true, labels: { color: C.tick, boxWidth: 10, font: { size: 11 } } }, tooltip: { backgroundColor: '#252830', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#d9dde2', bodyColor: '#8e9099', padding: 10 } },
+      scales: { r: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 10 }, backdropColor: 'transparent', callback: v => '£' + v }, pointLabels: { color: '#d9dde2', font: { size: 11 } }, angleLines: { color: C.grid } } },
+    },
+  });
+}
 
 function renderRatiosChart({ savingsRate, housingRatio, investRate, debtIncome }) {
   const ctx = document.getElementById('chart-ratios')?.getContext('2d');

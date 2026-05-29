@@ -2,13 +2,14 @@ import { initPage }  from '../page-init.js';
 import { save }      from '../store.js';
 import {
   calculateNetPay, calculateNetWorth, applyScheduledChanges, totalExpenses,
-  calculateSurplus, projectNetWorthTimeline,
+  calculateSurplus, projectNetWorthTimeline, ageWealthTrajectory,
   fmtGBP, round2
 } from '../calc.js';
 
 // Hoisted before top-level await
 const C = { positive:'#73bf69', negative:'#f2495c', info:'#5794f2', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
 let _chart = null;
+const charts = {};
 
 const state = await initPage('networth');
 render(state);
@@ -59,6 +60,7 @@ function render(st) {
     </table>`;
 
   renderNwChart(st, surplus, nwProj);
+  renderAgeTrajectoryChart(st, nw.netWorth, surplus);
 }
 
 function nwField(label, key, value, type='number') {
@@ -83,6 +85,115 @@ function bindNwFields(st) {
       render(st);
     });
   });
+}
+
+// ── Age Trajectory Chart ──────────────────────────────────────
+
+function renderAgeTrajectoryChart(st, currentNetWorth, monthlySurplus) {
+  const cp = st.settings?.chartParams?.ageTrajectory || {};
+  const p = {
+    currentAge: cp.currentAge || 25,
+    targetAge:  cp.targetAge  || 50,
+    growthRatePercent: cp.growthRatePercent || 10,
+    careerTransitionAge: cp.careerTransitionAge || 28,
+    careerTransitionSurplus: cp.careerTransitionMonthlySurplus || 860,
+  };
+
+  // Controls
+  const ctrl = document.getElementById('age-traj-controls');
+  if (ctrl) {
+    ctrl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:8px">
+        ${ageTrajField('Current age', 'currentAge', p.currentAge)}
+        ${ageTrajField('Target age', 'targetAge', p.targetAge)}
+        ${ageTrajField('Growth rate (%/yr)', 'growthRatePercent', p.growthRatePercent)}
+        ${ageTrajField('Career transition age', 'careerTransitionAge', p.careerTransitionAge)}
+        ${ageTrajField('Post-transition surplus (£/mo)', 'careerTransitionSurplus', p.careerTransitionSurplus)}
+      </div>`;
+    ctrl.querySelectorAll('.age-traj-field').forEach(el => {
+      el.addEventListener('input', () => {
+        if (!st.settings.chartParams) st.settings.chartParams = {};
+        if (!st.settings.chartParams.ageTrajectory) st.settings.chartParams.ageTrajectory = {};
+        const k = el.dataset.key;
+        const v = parseFloat(el.value) || 0;
+        st.settings.chartParams.ageTrajectory[k] = v;
+        if (k === 'careerTransitionSurplus') st.settings.chartParams.ageTrajectory.careerTransitionMonthlySurplus = v;
+        renderAgeTrajectoryChart(st, currentNetWorth, monthlySurplus);
+      });
+      el.addEventListener('change', async () => {
+        if (!st.settings.chartParams) st.settings.chartParams = {};
+        if (!st.settings.chartParams.ageTrajectory) st.settings.chartParams.ageTrajectory = {};
+        const k = el.dataset.key;
+        const v = parseFloat(el.value) || 0;
+        st.settings.chartParams.ageTrajectory[k] = v;
+        if (k === 'careerTransitionSurplus') st.settings.chartParams.ageTrajectory.careerTransitionMonthlySurplus = v;
+        await save('fin_settings', st.settings);
+      });
+    });
+  }
+
+  const pts = ageWealthTrajectory({
+    currentAge: p.currentAge,
+    targetAge:  p.targetAge,
+    startNetWorth: currentNetWorth,
+    monthlySurplus,
+    growthRatePercent: p.growthRatePercent,
+    careerTransitionAge: p.careerTransitionAge,
+    careerTransitionSurplus: p.careerTransitionSurplus,
+  });
+
+  // Milestone annotations
+  const milestoneColors = pts.map(pt => {
+    if (pt.netWorth >= 1000000) return C.positive;
+    if (pt.netWorth >= 100000) return C.info;
+    if (pt.netWorth >= 0) return '#fade2a';
+    return C.negative;
+  });
+
+  if (charts['chart-age-trajectory']) { charts['chart-age-trajectory'].destroy(); delete charts['chart-age-trajectory']; }
+  const ctx = document.getElementById('chart-age-trajectory')?.getContext('2d');
+  if (!ctx) return;
+
+  charts['chart-age-trajectory'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels: pts.map(pt => `Age ${pt.age}`), datasets: [{
+      label: 'Projected Net Worth',
+      data: pts.map(pt => pt.netWorth),
+      borderColor: C.info,
+      backgroundColor: C.info + '22',
+      fill: true,
+      tension: 0.35,
+      pointRadius: pts.map(pt =>
+        (pt.age === p.careerTransitionAge) ||
+        (Math.abs(pt.netWorth) < 5000) ||
+        (pt.netWorth >= 100000 && pts[pts.indexOf(pt)-1]?.netWorth < 100000) ||
+        (pt.netWorth >= 1000000 && pts[pts.indexOf(pt)-1]?.netWorth < 1000000)
+          ? 6 : 0
+      ),
+      pointBackgroundColor: milestoneColors,
+      borderWidth: 2,
+    }]},
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 700, easing: 'easeInOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#252830', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#d9dde2', bodyColor: '#8e9099', padding: 10,
+          callbacks: { label: item => ` £${Math.round(item.raw).toLocaleString()}` }
+        },
+        annotation: undefined,
+      },
+      scales: {
+        x: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, maxTicksLimit: 10 } },
+        y: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, callback: v => '£' + Math.round(v/1000) + 'k' } },
+      },
+    },
+  });
+}
+
+function ageTrajField(label, key, value) {
+  return `<div class="form-group" style="margin-bottom:0">
+    <label class="form-label" style="font-size:11px">${label}</label>
+    <input type="number" class="form-input age-traj-field" data-key="${key}" value="${value}" step="any" style="padding:4px 8px;font-size:12px" />
+  </div>`;
 }
 
 // ── Chart ─────────────────────────────────────────────────────

@@ -1,11 +1,13 @@
 import { initPage }  from '../page-init.js';
 import { save }      from '../store.js';
 import {
-  indiaTripProgress, fmtGBP, fmtPct, round2
+  indiaTripProgress, compoundGrowthProjection, emergencyRunwayMonths,
+  applyScheduledChanges, totalExpenses, calculateNetPay, calculateSurplus,
+  fmtGBP, fmtPct, round2
 } from '../calc.js';
 
 // Hoisted before top-level await
-const C = { info:'#5794f2', positive:'#73bf69', warning:'#ff9830', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+const C = { info:'#5794f2', positive:'#73bf69', warning:'#ff9830', negative:'#f2495c', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
 const charts = {};
 
 const state = await initPage('goals');
@@ -98,6 +100,8 @@ function render(st) {
   };
 
   renderCharts(st, log, prog);
+  renderEmergencyRunwayCard(st);
+  renderCompoundGrowthChart(st);
 }
 
 function indiaField(label, key, value) {
@@ -122,6 +126,112 @@ function bindIndiaFields(st) {
       render(st);
     });
   });
+}
+
+// ── Emergency Fund Runway ─────────────────────────────────────
+
+function renderEmergencyRunwayCard(st) {
+  const el = document.getElementById('emergency-runway-card');
+  if (!el) return;
+  const inv  = st.investments || { cashAccounts: [] };
+  const cash = inv.cashAccounts.reduce((s, a) => s + (a.balanceGBP || 0), 0);
+  const eff  = applyScheduledChanges(st.expenses || { items: [], scheduledChanges: [] });
+  const exp  = totalExpenses(eff);
+  const months = emergencyRunwayMonths(cash, exp);
+  const color  = months >= 6 ? 'positive' : months >= 3 ? 'warning' : months >= 1 ? 'warning' : 'negative';
+  const cls    = `text-${color}`;
+  const msg    = months >= 6 ? 'Excellent coverage' : months >= 3 ? 'Building up' : months >= 1 ? 'Low coverage' : 'Critical — less than 1 month';
+  el.innerHTML = `
+    <div class="metric-card" style="background:var(--bg-panel);border:1px solid var(--border-color);border-radius:8px;padding:20px 24px;display:flex;align-items:center;gap:24px;margin-bottom:16px">
+      <div>
+        <div class="label" style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">Emergency Fund Runway</div>
+        <div class="value ${cls}" style="font-size:2.4rem;font-weight:700;font-family:var(--font-mono)">${months.toFixed(1)} months</div>
+        <div class="sub" style="font-size:12px;color:var(--text-muted);margin-top:4px">${msg} · £${Math.round(cash).toLocaleString()} cash ÷ £${Math.round(exp).toLocaleString()}/mo expenses</div>
+      </div>
+    </div>`;
+}
+
+// ── Compound Growth Projector ─────────────────────────────────
+
+function renderCompoundGrowthChart(st) {
+  const cp = st.settings?.chartParams?.compoundGrowth || {};
+  const monthlyAmount = cp.monthlyAmount ?? 217;
+  const ratePercent   = cp.ratePercent   ?? 10;
+  const years         = cp.years         ?? 25;
+
+  // Final value metric card
+  const pts      = compoundGrowthProjection(monthlyAmount, ratePercent, years);
+  const finalVal = pts[pts.length - 1]?.value || 0;
+  const card     = document.getElementById('compound-growth-card');
+  if (card) {
+    card.innerHTML = `
+      <div style="background:var(--bg-panel);border:1px solid var(--border-color);border-radius:8px;padding:16px 20px;display:inline-flex;gap:32px;align-items:center;margin-bottom:8px">
+        <div>
+          <div style="font-size:11px;color:var(--text-secondary)">Final value after ${years} years</div>
+          <div style="font-size:2rem;font-weight:700;font-family:var(--font-mono);color:var(--color-positive)">£${Math.round(finalVal).toLocaleString()}</div>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted)">
+          £${monthlyAmount}/mo × ${years}yr @ ${ratePercent}%/yr
+        </div>
+      </div>`;
+  }
+
+  // Controls
+  const ctrl = document.getElementById('compound-controls');
+  if (ctrl) {
+    ctrl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:8px">
+        ${cgField('Monthly amount (£)', 'monthlyAmount', monthlyAmount, st)}
+        ${cgField('Annual rate (%)', 'ratePercent', ratePercent, st)}
+        ${cgField('Years', 'years', years, st)}
+      </div>`;
+    ctrl.querySelectorAll('.cg-field').forEach(el => {
+      el.addEventListener('input', () => {
+        if (!st.settings.chartParams) st.settings.chartParams = {};
+        if (!st.settings.chartParams.compoundGrowth) st.settings.chartParams.compoundGrowth = {};
+        st.settings.chartParams.compoundGrowth[el.dataset.key] = parseFloat(el.value) || 0;
+        renderCompoundGrowthChart(st);
+      });
+      el.addEventListener('change', async () => {
+        if (!st.settings.chartParams) st.settings.chartParams = {};
+        if (!st.settings.chartParams.compoundGrowth) st.settings.chartParams.compoundGrowth = {};
+        st.settings.chartParams.compoundGrowth[el.dataset.key] = parseFloat(el.value) || 0;
+        await save('fin_settings', st.settings);
+      });
+    });
+  }
+
+  if (charts['chart-compound-growth']) { charts['chart-compound-growth'].destroy(); delete charts['chart-compound-growth']; }
+  const ctx = document.getElementById('chart-compound-growth')?.getContext('2d');
+  if (!ctx) return;
+  charts['chart-compound-growth'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels: pts.map(p => `Yr ${p.year}`), datasets: [{
+      label: 'Projected Value',
+      data: pts.map(p => p.value),
+      borderColor: C.positive,
+      backgroundColor: C.positive + '22',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 0,
+      borderWidth: 2,
+    }]},
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 600, easing: 'easeInOutQuart' },
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#252830', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#d9dde2', bodyColor: '#8e9099', padding: 10,
+        callbacks: { label: item => ` £${Math.round(item.raw).toLocaleString()}` } } },
+      scales: {
+        x: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, maxTicksLimit: 10 } },
+        y: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, callback: v => '£' + Math.round(v / 1000) + 'k' } },
+      },
+    },
+  });
+}
+
+function cgField(label, key, value) {
+  return `<div class="form-group" style="margin-bottom:0">
+    <label class="form-label" style="font-size:11px">${label}</label>
+    <input type="number" class="form-input cg-field" data-key="${key}" value="${value}" step="any" style="padding:4px 8px;font-size:12px" />
+  </div>`;
 }
 
 // ── Charts ─────────────────────────────────────────────────────

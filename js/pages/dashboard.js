@@ -5,6 +5,7 @@ import {
   applyScheduledChanges, totalExpenses,
   expensesByCategory, indiaTripProgress,
   emergencyFundProgress, calculateSurplus,
+  emergencyRunwayMonths,
   fmtGBP, fmtINR, fmtPct, round2
 } from '../calc.js';
 
@@ -71,6 +72,20 @@ function render(st) {
   document.getElementById('gauge-lbl-emergency').textContent = `${fmtGBP(emergency.savings)} of ${fmtGBP(emergency.target)}`;
   document.getElementById('gauge-val-india').textContent = fmtPct(india.pct);
   document.getElementById('gauge-lbl-india').textContent = `${fmtGBP(goals.indiaTrip?.savedGBP||0)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`;
+
+  // ── Emergency Runway KPI ─────────────────────────────────
+  const cashBalance = inv.cashAccounts.reduce((s, a) => s + (a.balanceGBP || 0), 0);
+  const runway = emergencyRunwayMonths(cashBalance, totalExp);
+  const runwayColor = runway >= 6 ? 'positive' : runway >= 3 ? 'warning' : 'negative';
+  const runwayEl = document.getElementById('emergency-runway-kpi');
+  if (runwayEl) {
+    runwayEl.innerHTML = metricCard(
+      'Emergency Runway',
+      runway.toFixed(1) + ' months',
+      runwayColor,
+      runway >= 6 ? 'Excellent coverage' : runway >= 3 ? '3–6 months target' : runway >= 1 ? 'Low — build fund' : 'Critical'
+    );
+  }
 
   // ── Charts ───────────────────────────────────────────────
   renderCharts(st, { byCat: expensesByCategory(effItems), log, debtPct, india, emergency });

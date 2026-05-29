@@ -160,6 +160,24 @@ export const DEFAULTS = {
       careerTransitionDate: '',
       newSalaryGBP: '',
     },
+    chartParams: {
+      ageTrajectory: {
+        currentAge: 25,
+        targetAge: 50,
+        growthRatePercent: 10,
+        careerTransitionAge: 28,
+        careerTransitionMonthlySurplus: 860,
+      },
+      budgetByCategory: {
+        Housing: 700, Debt: 325, Insurance: 318, Phone: 74,
+        Transport: 95, Subscription: 68, Food: 85, Personal: 8, Travel: 113, Other: 0,
+      },
+      compoundGrowth: {
+        monthlyAmount: 217,
+        ratePercent: 10,
+        years: 25,
+      },
+    },
   },
 
   fin_tax_tracker: {
