@@ -13,6 +13,27 @@
     .strength-bar { height: 3px; border-radius: 2px; background: var(--bg-input); margin-top: 4px; }
     .strength-fill { height: 100%; border-radius: 2px; transition: width 0.2s, background 0.2s; }
     .lock-icon { width: 40px; height: 40px; color: var(--color-warning); margin: 0 auto 8px; display: block; }
+    .error-box {
+      display: none;
+      background: rgba(242,73,92,0.10);
+      border: 1px solid rgba(242,73,92,0.35);
+      border-radius: 6px;
+      padding: 10px 14px;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .error-box.show { display: flex; }
+    .error-box svg { flex-shrink: 0; color: #f2495c; margin-top: 1px; }
+    .error-box-body { flex: 1; }
+    .error-box-title { color: #f2495c; font-size: 13px; font-weight: 600; }
+    .error-box-sub { color: #8e9099; font-size: 12px; margin-top: 2px; }
+    .attempts-pip-row { display: flex; gap: 5px; margin-top: 6px; }
+    .attempt-pip {
+      width: 20px; height: 5px; border-radius: 3px;
+      background: rgba(242,73,92,0.25);
+      transition: background 0.2s;
+    }
+    .attempt-pip.used { background: #f2495c; }
     .pwd-wrap { position: relative; }
     .pwd-wrap .form-input { padding-right: 40px; }
     .pwd-eye {
@@ -70,7 +91,7 @@
 
       <!-- Login -->
       <div id="login-panel" style="display:none">
-        <h1 class="login-title">Welcome back</h1>
+        <h1 class="login-title">Welcome back, Atharva 👋</h1>
         <p class="login-subtitle" id="login-subtitle">Enter your password to unlock your dashboard.</p>
         <form class="login-form" id="login-form" autocomplete="off">
           <div id="lockout-box" class="lockout-timer" style="display:none">
@@ -89,7 +110,14 @@
                 </button>
               </div>
             </div>
-            <div id="login-error" class="login-error" style="display:none"></div>
+            <div id="login-error" class="error-box" role="alert">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div class="error-box-body">
+                <div class="error-box-title" id="login-error-title">Incorrect password</div>
+                <div class="error-box-sub" id="login-error-sub"></div>
+                <div class="attempts-pip-row" id="login-pips"></div>
+              </div>
+            </div>
             <button type="submit" class="btn btn-primary btn-full" id="login-btn">
               <span id="login-btn-text">Unlock dashboard</span>
               <div class="spinner" id="login-spinner" style="display:none;width:16px;height:16px;margin-left:6px;"></div>
@@ -163,6 +191,37 @@
 
     function showError(el, msg) { el.textContent = msg; el.style.display = 'block'; }
     function hideError(el) { el.style.display = 'none'; }
+
+    // ── Rich login error with attempt pips ───────────────────
+    function showLoginError(msg) {
+      const attempts = parseInt(localStorage.getItem('login_attempts') || '0');
+      const remaining = Math.max(0, 5 - attempts);
+      const box   = document.getElementById('login-error');
+      const title = document.getElementById('login-error-title');
+      const sub   = document.getElementById('login-error-sub');
+      const pips  = document.getElementById('login-pips');
+
+      title.textContent = msg.includes('locked') ? 'Account locked' : 'Incorrect password';
+      sub.textContent   = remaining > 0
+        ? `${remaining} attempt${remaining === 1 ? '' : 's'} remaining before lockout`
+        : 'Account is now locked.';
+
+      pips.innerHTML = Array.from({length: 5}, (_, i) =>
+        `<div class="attempt-pip ${i < attempts ? 'used' : ''}"></div>`
+      ).join('');
+
+      box.classList.add('show');
+
+      // Shake the input
+      const input = document.getElementById('login-pwd');
+      input.style.borderColor = '#f2495c';
+      input.addEventListener('input', () => { input.style.borderColor = ''; box.classList.remove('show'); }, { once: true });
+    }
+
+    function hideLoginError() {
+      document.getElementById('login-error').classList.remove('show');
+      document.getElementById('login-pwd').style.borderColor = '';
+    }
 
     function setLoading(btnText, spinner, state) {
       btnText.parentElement.disabled = state;
@@ -252,7 +311,7 @@
     // ── Login
     loginForm.addEventListener('submit', async e => {
       e.preventDefault();
-      hideError(loginError);
+      hideLoginError();
       const pwd = document.getElementById('login-pwd').value;
 
       const btnText = document.getElementById('login-btn-text');
@@ -265,7 +324,7 @@
         btnText.textContent = 'Loading dashboard...';
         await transitionToDashboard();
       } catch(err) {
-        showError(loginError, err.message);
+        showLoginError(err.message);
         btnText.textContent = 'Unlock dashboard';
         setLoading(btnText, spinner, false);
         const ls = checkLockout();
