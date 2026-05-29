@@ -1,5 +1,5 @@
-# ── Credential files — NEVER commit ─────────────────────────
-js/auth-config.js
+# ── Local utilities — not part of deployment ────────────────
+# auth-config.js is no longer used (CRED values inlined in auth.js)
 keygen.html
 
 # ── Personal data templates (future) ────────────────────────
