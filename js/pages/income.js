@@ -5,6 +5,11 @@ import {
   calculateSurplus, fmtGBP, round2
 } from '../calc.js';
 
+// Hoisted before top-level await — avoids TDZ errors when render() runs
+const C = { info:'#5794f2', teal:'#6ccf8e', negative:'#f2495c', positive:'#73bf69',
+            grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+let _wChart = null;
+
 const state = await initPage('income');
 render(state);
 
@@ -91,10 +96,6 @@ function iField(label, key, value) {
 }
 
 // ── Chart ─────────────────────────────────────────────────────
-
-const C = { info:'#5794f2', teal:'#6ccf8e', negative:'#f2495c', positive:'#73bf69',
-            grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
-let _wChart = null;
 
 function renderWaterfallChart(pay, inc) {
   const ctx = document.getElementById('chart-income-waterfall')?.getContext('2d');

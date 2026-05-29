@@ -6,6 +6,10 @@ import {
   fmtGBP, round2
 } from '../calc.js';
 
+// Hoisted before top-level await
+const C = { positive:'#73bf69', negative:'#f2495c', info:'#5794f2', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+let _chart = null;
+
 const state = await initPage('networth');
 render(state);
 
@@ -82,9 +86,6 @@ function bindNwFields(st) {
 }
 
 // ── Chart ─────────────────────────────────────────────────────
-
-const C = { positive:'#73bf69', negative:'#f2495c', info:'#5794f2', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
-let _chart = null;
 
 function renderNwChart(st, surplus, nwProj) {
   const ctx = document.getElementById('chart-nw-timeline')?.getContext('2d');

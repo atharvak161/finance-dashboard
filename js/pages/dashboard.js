@@ -8,6 +8,15 @@ import {
   fmtGBP, fmtINR, fmtPct, round2
 } from '../calc.js';
 
+// Hoisted before top-level await
+const C = {
+  grid:'rgba(255,255,255,0.06)', tick:'#5c6170',
+  info:'#5794f2', positive:'#73bf69', warning:'#ff9830', negative:'#f2495c',
+  purple:'#b877d9', teal:'#6ccf8e', cyan:'#4dd0e1', yellow:'#fade2a',
+  chart:['#5794f2','#73bf69','#fade2a','#ff9830','#f2495c','#b877d9','#6ccf8e','#4dd0e1'],
+};
+const charts = {};
+
 const state = await initPage('overview');
 render(state);
 
@@ -77,13 +86,6 @@ function metricCard(label, value, colorClass, sub) {
 
 // ── Charts ────────────────────────────────────────────────────
 
-const C = {
-  grid:'rgba(255,255,255,0.06)', tick:'#5c6170',
-  info:'#5794f2', positive:'#73bf69', warning:'#ff9830', negative:'#f2495c',
-  purple:'#b877d9', teal:'#6ccf8e', cyan:'#4dd0e1', yellow:'#fade2a',
-  chart:['#5794f2','#73bf69','#fade2a','#ff9830','#f2495c','#b877d9','#6ccf8e','#4dd0e1'],
-};
-const charts = {};
 function getCtx(id) {
   if (charts[id]) { charts[id].destroy(); delete charts[id]; }
   return document.getElementById(id)?.getContext('2d') || null;

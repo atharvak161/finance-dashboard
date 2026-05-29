@@ -4,6 +4,13 @@ import {
   applyScheduledChanges, totalExpenses, expensesByCategory, fmtGBP, round2
 } from '../calc.js';
 
+// Hoisted before top-level await
+const CATS = ['Housing','Debt','Insurance','Phone','Transport','Subscription','Food','Personal','Travel','Other'];
+const C = { chart:['#5794f2','#73bf69','#fade2a','#ff9830','#f2495c','#b877d9','#6ccf8e','#4dd0e1'],
+            info:'#5794f2', teal:'#6ccf8e', warning:'#ff9830',
+            grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+const charts = {};
+
 const state = await initPage('expenses');
 render(state);
 
@@ -54,8 +61,6 @@ function render(st) {
     render(st);
   };
 }
-
-const CATS = ['Housing','Debt','Insurance','Phone','Transport','Subscription','Food','Personal','Travel','Other'];
 
 function expRow(item, i) {
   return `<tr>
@@ -112,10 +117,6 @@ function escHtml(s) {
 
 // ── Charts ─────────────────────────────────────────────────────
 
-const C = { chart:['#5794f2','#73bf69','#fade2a','#ff9830','#f2495c','#b877d9','#6ccf8e','#4dd0e1'],
-            info:'#5794f2', teal:'#6ccf8e', warning:'#ff9830',
-            grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
-const charts = {};
 function getCtx(id) {
   if (charts[id]) { charts[id].destroy(); delete charts[id]; }
   return document.getElementById(id)?.getContext('2d') || null;

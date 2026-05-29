@@ -4,6 +4,10 @@ import {
   taxTrackerProgress, fmtGBP, fmtPct, round2
 } from '../calc.js';
 
+// Hoisted before top-level await
+const C = { positive:'#73bf69', warning:'#ff9830', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+let _chart = null;
+
 const state = await initPage('tax');
 render(state);
 
@@ -88,9 +92,6 @@ function bindTaxFields(st) {
 }
 
 // ── Chart ─────────────────────────────────────────────────────
-
-const C = { positive:'#73bf69', warning:'#ff9830', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
-let _chart = null;
 
 function renderTaxChart(tt) {
   const ctx = document.getElementById('chart-tax-line')?.getContext('2d');
