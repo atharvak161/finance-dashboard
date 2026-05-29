@@ -5,6 +5,10 @@ import {
   fmtGBP, fmtINR, fmtMonths, round2
 } from '../calc.js';
 
+// Hoisted before top-level await
+const C = { negative:'#f2495c', positive:'#73bf69', info:'#5794f2', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+const charts = {};
+
 const state = await initPage('debts');
 let amortShowAll = false;
 render(state);
@@ -151,8 +155,6 @@ function dField(label, key, value) {
 
 // ── Charts ─────────────────────────────────────────────────────
 
-const C = { negative:'#f2495c', positive:'#73bf69', info:'#5794f2', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
-const charts = {};
 function getCtx(id) { if(charts[id]){charts[id].destroy();delete charts[id];}return document.getElementById(id)?.getContext('2d')||null; }
 
 function renderDebtCharts(sbi) {

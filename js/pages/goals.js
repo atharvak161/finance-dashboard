@@ -4,6 +4,10 @@ import {
   indiaTripProgress, fmtGBP, fmtPct, round2
 } from '../calc.js';
 
+// Hoisted before top-level await
+const C = { info:'#5794f2', positive:'#73bf69', warning:'#ff9830', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+const charts = {};
+
 const state = await initPage('goals');
 render(state);
 
@@ -122,8 +126,6 @@ function bindIndiaFields(st) {
 
 // ── Charts ─────────────────────────────────────────────────────
 
-const C = { info:'#5794f2', positive:'#73bf69', warning:'#ff9830', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
-const charts = {};
 function getCtx(id) { if(charts[id]){charts[id].destroy();delete charts[id];}return document.getElementById(id)?.getContext('2d')||null; }
 
 function renderCharts(st, log, prog) {
