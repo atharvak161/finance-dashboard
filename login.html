@@ -32,7 +32,10 @@
       text-transform: uppercase;
       margin-bottom: 32px;
       user-select: none;
+      cursor: pointer;
+      transition: color 0.2s;
     }
+    .fd-title:hover { color: rgba(255,255,255,0.65); }
 
     /* ── Auth container (hidden until CTRL+ALT+A) ─────────── */
     .auth-wrap {
@@ -153,7 +156,7 @@
 </head>
 <body>
   <div class="login-shell" id="shell">
-    <div class="fd-title" id="fd-title">Finance Dashboard</div>
+    <div class="fd-title" id="fd-title" role="button" tabindex="0" aria-label="Click to authenticate">Finance Dashboard</div>
 
     <div class="auth-wrap" id="auth-wrap" role="dialog" aria-label="Authentication" aria-modal="true">
       <div class="auth-sep"></div>
@@ -185,7 +188,7 @@
 
   <!-- Accessible hint for screen readers -->
   <p class="visually-hidden" aria-live="polite" id="sr-hint">
-    Finance Dashboard. Press Ctrl Alt A to authenticate.
+    Finance Dashboard. Click the title to authenticate.
   </p>
 
   <style>
@@ -358,19 +361,10 @@
       }
     }
 
-    // ── Keyboard listeners ────────────────────────────────────────────
+    // ── Click on title to activate ───────────────────────────────────
+    document.getElementById('fd-title').addEventListener('click', activate);
 
-    // CTRL+ALT+A activation (with 50ms debounce to prevent accidental repeat)
-    let _lastActivation = 0;
-    document.addEventListener('keydown', e => {
-      if (e.ctrlKey && e.altKey && (e.key === 'a' || e.key === 'A')) {
-        const now = Date.now();
-        if (now - _lastActivation < 300) return; // debounce
-        _lastActivation = now;
-        e.preventDefault();
-        activate();
-      }
-    });
+    // ── Keyboard listeners ────────────────────────────────────────────
 
     // Username field: Enter commits, Escape resets
     inputUser.addEventListener('keydown', e => {
