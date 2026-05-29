@@ -56,16 +56,29 @@ async function boot() {
   bindExportPdfBtn();
 }
 
+const _FIN_KEYS = [
+  'fin_profile','fin_income','fin_expenses','fin_debts','fin_investments',
+  'fin_goals','fin_monthly_log','fin_settings','fin_tax_tracker','fin_india_log'
+];
+
 async function loadAll() {
+  let results = await Promise.allSettled(_FIN_KEYS.map(k => load(k)));
+
+  // If ANY key failed to decrypt, the stored data can't be read under this key.
+  // Wipe fin_ storage and write fresh defaults so the dashboard is usable.
+  if (results.some(r => r.status === 'rejected')) {
+    Object.keys(localStorage).filter(k => k.startsWith('fin_')).forEach(k => localStorage.removeItem(k));
+    const { initializeDefaults } = await import('./store.js');
+    const { getEncKey } = await import('./auth.js');
+    await initializeDefaults(getEncKey());
+    results = await Promise.allSettled(_FIN_KEYS.map(k => load(k)));
+  }
+
   [
     state.profile, state.income, state.expenses, state.debts,
     state.investments, state.goals, state.monthlyLog, state.settings,
     state.taxTracker, state.indiaLog
-  ] = await Promise.all([
-    load('fin_profile'), load('fin_income'), load('fin_expenses'), load('fin_debts'),
-    load('fin_investments'), load('fin_goals'), load('fin_monthly_log'), load('fin_settings'),
-    load('fin_tax_tracker'), load('fin_india_log')
-  ]);
+  ] = results.map(r => r.status === 'fulfilled' ? r.value : null);
   state.indiaLog = state.indiaLog || [];
 }
 
@@ -908,9 +921,10 @@ function escHtml(s) {
 boot().catch(err => {
   console.error('Dashboard boot error:', err);
   const main = document.querySelector('.main') || document.body;
-  main.innerHTML = `<div style="padding:48px;color:#f2495c;font-family:monospace;max-width:600px">
-    <p style="font-size:16px;font-weight:600;margin-bottom:8px">Dashboard failed to load</p>
-    <p style="font-size:12px;color:#8e9099;margin-bottom:16px">${err.message}</p>
+  main.innerHTML = `<div style="padding:48px;max-width:600px">
+    <p style="font-size:16px;font-weight:600;color:#f2495c;margin-bottom:8px">Dashboard failed to load</p>
+    <p style="font-size:13px;color:#d9dde2;margin-bottom:4px">${err.name || 'Error'}: ${err.message || '(no message)'}</p>
+    <p style="font-size:11px;color:#5c6170;margin-bottom:20px;white-space:pre-wrap">${(err.stack||'').slice(0,400)}</p>
     <a href="index.html" style="color:#5794f2;font-size:13px">← Back to login</a>
   </div>`;
 });
