@@ -171,9 +171,10 @@ export function calculateSurplus(netPay, expenses) {
 // ── India trip ───────────────────────────────────────────────
 
 export function indiaTripProgress(goals) {
-  const trip = goals.indiaTrip;
-  const pct  = Math.min(100, round2((trip.savedGBP / trip.targetGBP) * 100));
-  const remaining = round2(trip.targetGBP - trip.savedGBP);
+  const trip = goals?.indiaTrip;
+  if (!trip || !trip.targetGBP) return { pct: 0, remaining: 0, daysLeft: 0, monthsLeft: 0 };
+  const pct  = Math.min(100, round2(((trip.savedGBP || 0) / trip.targetGBP) * 100));
+  const remaining = round2(trip.targetGBP - (trip.savedGBP || 0));
   const daysLeft  = Math.max(0, Math.round((new Date(trip.deadline) - new Date()) / 86400000));
   const monthsLeft= Math.max(0, round2(daysLeft / 30.44));
   return { pct, remaining, daysLeft, monthsLeft };
@@ -198,6 +199,9 @@ export function wealthProgress(netWorth, targetGBP) {
 // ── Tax tracker ──────────────────────────────────────────────
 
 export function taxTrackerProgress(tracker) {
+  if (!tracker?.startDate || !tracker?.endDate || !tracker?.underpaymentTotal) {
+    return { collected: 0, remaining: tracker?.underpaymentTotal || 0, pct: 0, monthsElapsed: 0, monthsLeft: 0, daysLeft: 0 };
+  }
   const start  = new Date(tracker.startDate);
   const end    = new Date(tracker.endDate);
   const today  = new Date();
