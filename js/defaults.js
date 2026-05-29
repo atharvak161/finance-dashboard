@@ -16,7 +16,7 @@ export const DEFAULTS = {
     baseSalaryGBP: 28000,
     hoursPerWeek: 37.5,
     avgOvertimeGrossGBP: 275,
-    pensionEmployeeRate: 4,
+    pensionEmployeeRate: 3,
     pensionEmployerRate: 3,
     taxCode: '1034L',
     taxFreeAllowanceAnnual: 10348,
