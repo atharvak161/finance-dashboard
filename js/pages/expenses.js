@@ -7,13 +7,13 @@ import {
 // Hoisted before top-level await — avoids TDZ errors when render() runs
 const base = { responsive:true, maintainAspectRatio:false,
   animation:{ duration:700, easing:'easeInOutQuart' },
-  plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'#252830', borderColor:'rgba(255,255,255,0.12)', borderWidth:1, titleColor:'#d9dde2', bodyColor:'#8e9099', padding:10 } },
-  scales:{ x:{ grid:{ color:'rgba(255,255,255,0.06)' }, ticks:{ color:'#5c6170', font:{size:11} } }, y:{ grid:{ color:'rgba(255,255,255,0.06)' }, ticks:{ color:'#5c6170', font:{size:11} } } },
+  plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'rgba(9,12,20,0.96)', borderColor:'rgba(0,191,255,0.25)', borderWidth:1, titleColor:'#00bfff', bodyColor:'#7a96b3', padding:10 } },
+  scales:{ x:{ grid:{ color:'rgba(255,255,255,0.06)' }, ticks:{ color:'#3d5473', font:{size:11} } }, y:{ grid:{ color:'rgba(255,255,255,0.06)' }, ticks:{ color:'#3d5473', font:{size:11} } } },
 };
 const CATS = ['Housing','Debt','Insurance','Phone','Transport','Subscription','Food','Personal','Travel','Other'];
-const C = { chart:['#5794f2','#73bf69','#fade2a','#ff9830','#f2495c','#b877d9','#6ccf8e','#4dd0e1'],
-            info:'#5794f2', teal:'#6ccf8e', warning:'#ff9830',
-            grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+const C = { chart:['#00bfff','#00e676','#ffd600','#ff9100','#ff1744','#d500f9','#00e5ff','#18ffff'],
+            info:'#00bfff', teal:'#00e5ff', warning:'#ff9100',
+            grid:'rgba(0,191,255,0.07)', tick:'#3d5473' };
 const charts = {};
 
 const state = await initPage('expenses');
