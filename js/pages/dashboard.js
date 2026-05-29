@@ -8,7 +8,13 @@ import {
   fmtGBP, fmtINR, fmtPct, round2
 } from '../calc.js';
 
-// Hoisted before top-level await
+// Hoisted before top-level await — avoids TDZ errors when render() runs
+const base = {
+  responsive:true, maintainAspectRatio:false,
+  animation:{ duration:700, easing:'easeInOutQuart' },
+  plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'#252830', borderColor:'rgba(255,255,255,0.12)', borderWidth:1, titleColor:'#d9dde2', bodyColor:'#8e9099', padding:10 } },
+  scales:{ x:{ grid:{ color:'rgba(255,255,255,0.06)' }, ticks:{ color:'#5c6170', font:{ size:11 } } }, y:{ grid:{ color:'rgba(255,255,255,0.06)' }, ticks:{ color:'#5c6170', font:{ size:11 } } } },
+};
 const C = {
   grid:'rgba(255,255,255,0.06)', tick:'#5c6170',
   info:'#5794f2', positive:'#73bf69', warning:'#ff9830', negative:'#f2495c',
@@ -90,13 +96,6 @@ function getCtx(id) {
   if (charts[id]) { charts[id].destroy(); delete charts[id]; }
   return document.getElementById(id)?.getContext('2d') || null;
 }
-const base = {
-  responsive:true, maintainAspectRatio:false,
-  animation:{ duration:700, easing:'easeInOutQuart' },
-  plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'#252830', borderColor:'rgba(255,255,255,0.12)', borderWidth:1, titleColor:'#d9dde2', bodyColor:'#8e9099', padding:10 } },
-  scales:{ x:{ grid:{ color:C.grid }, ticks:{ color:C.tick, font:{ size:11 } } }, y:{ grid:{ color:C.grid }, ticks:{ color:C.tick, font:{ size:11 } } } },
-};
-
 function renderCharts(st, { byCat, log, debtPct, india, emergency }) {
   // Expense doughnut
   const labels = Object.keys(byCat), values = Object.values(byCat);

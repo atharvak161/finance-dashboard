@@ -4,7 +4,12 @@ import {
   applyScheduledChanges, totalExpenses, expensesByCategory, fmtGBP, round2
 } from '../calc.js';
 
-// Hoisted before top-level await
+// Hoisted before top-level await — avoids TDZ errors when render() runs
+const base = { responsive:true, maintainAspectRatio:false,
+  animation:{ duration:700, easing:'easeInOutQuart' },
+  plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'#252830', borderColor:'rgba(255,255,255,0.12)', borderWidth:1, titleColor:'#d9dde2', bodyColor:'#8e9099', padding:10 } },
+  scales:{ x:{ grid:{ color:'rgba(255,255,255,0.06)' }, ticks:{ color:'#5c6170', font:{size:11} } }, y:{ grid:{ color:'rgba(255,255,255,0.06)' }, ticks:{ color:'#5c6170', font:{size:11} } } },
+};
 const CATS = ['Housing','Debt','Insurance','Phone','Transport','Subscription','Food','Personal','Travel','Other'];
 const C = { chart:['#5794f2','#73bf69','#fade2a','#ff9830','#f2495c','#b877d9','#6ccf8e','#4dd0e1'],
             info:'#5794f2', teal:'#6ccf8e', warning:'#ff9830',
@@ -121,11 +126,6 @@ function getCtx(id) {
   if (charts[id]) { charts[id].destroy(); delete charts[id]; }
   return document.getElementById(id)?.getContext('2d') || null;
 }
-const base = { responsive:true, maintainAspectRatio:false,
-  animation:{ duration:700, easing:'easeInOutQuart' },
-  plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'#252830', borderColor:'rgba(255,255,255,0.12)', borderWidth:1, titleColor:'#d9dde2', bodyColor:'#8e9099', padding:10 } },
-  scales:{ x:{ grid:{ color:C.grid }, ticks:{ color:C.tick, font:{size:11} } }, y:{ grid:{ color:C.grid }, ticks:{ color:C.tick, font:{size:11} } } },
-};
 
 function renderCharts(expenses, effItems) {
   const byCat    = expensesByCategory(effItems);
