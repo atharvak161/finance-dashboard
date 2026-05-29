@@ -7,7 +7,7 @@ import {
 } from '../calc.js';
 
 // Hoisted before top-level await
-const C = { positive:'#73bf69', negative:'#f2495c', warning:'#ff9830', info:'#5794f2', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+const C = { positive:'#00e676', negative:'#ff1744', warning:'#ff9100', info:'#00bfff', grid:'rgba(0,191,255,0.07)', tick:'#3d5473' };
 let _chart = null;
 const charts = {};
 
@@ -140,18 +140,18 @@ function renderSankey(st) {
   const nodeW = 14;
 
   const catColors = {
-    Housing:'#5794f2', Debt:'#f2495c', Insurance:'#73bf69', Phone:'#ff9830',
-    Transport:'#fade2a', Subscription:'#b877d9', Food:'#6ccf8e',
-    Personal:'#4dd0e1', Travel:'#ff7eb6', Other:'#8e9099', Savings:'#73bf69',
+    Housing:'#00bfff', Debt:'#ff1744', Insurance:'#00e676', Phone:'#ff9100',
+    Transport:'#ffd600', Subscription:'#d500f9', Food:'#00e5ff',
+    Personal:'#18ffff', Travel:'#ff7eb6', Other:'#8e9099', Savings:'#00e676',
   };
 
   const gross = pay.grossWithOT;
   const deductions = [
-    { label:'Income Tax', value:pay.incomeTax, color:'#f2495c' },
-    { label:'Nat. Insurance', value:pay.ni, color:'#ff9830' },
-    { label:'Pension', value:pay.pension, color:'#b877d9' },
+    { label:'Income Tax', value:pay.incomeTax, color:'#ff1744' },
+    { label:'Nat. Insurance', value:pay.ni, color:'#ff9100' },
+    { label:'Pension', value:pay.pension, color:'#d500f9' },
   ];
-  if (pay.extraTax > 0) deductions.push({ label:'Tax Underpay', value:pay.extraTax, color:'#fade2a' });
+  if (pay.extraTax > 0) deductions.push({ label:'Tax Underpay', value:pay.extraTax, color:'#ffd600' });
   const net = pay.netWithOT;
 
   const byCat = {};
@@ -162,7 +162,7 @@ function renderSankey(st) {
   const expFlows = Object.entries(byCat)
     .sort((a, b) => b[1] - a[1])
     .map(([cat, val]) => ({ label: cat, value: val, color: catColors[cat] || '#8e9099' }));
-  if (savings > 0) expFlows.push({ label: 'Savings', value: savings, color: '#73bf69' });
+  if (savings > 0) expFlows.push({ label: 'Savings', value: savings, color: '#00e676' });
 
   const usableH = H - 80;
   const toH = v => Math.max(2, (v / gross) * usableH);
@@ -205,7 +205,7 @@ function renderSankey(st) {
     svg += flow(x1 + nodeW, grossOut, d.h, x2 - nodeW, d.y, d.h, d.color);
     grossOut += d.h + 3;
   }
-  svg += flow(x1 + nodeW, grossOut, netH, x2 - nodeW, netY, netH, '#5794f2');
+  svg += flow(x1 + nodeW, grossOut, netH, x2 - nodeW, netY, netH, '#00bfff');
 
   let netOut = netY;
   for (const e of expNodes) {
@@ -227,7 +227,7 @@ function renderSankey(st) {
 
   for (const e of expNodes) {
     svg += `<rect x="${x3-140-nodeW}" y="${e.y}" width="${nodeW}" height="${e.h}" fill="${e.color}" rx="2"/>`;
-    const labelColor = e.label === 'Savings' ? '#73bf69' : '#d9dde2';
+    const labelColor = e.label === 'Savings' ? '#00e676' : '#d9dde2';
     svg += `<text x="${x3-130}" y="${e.y + e.h/2}" fill="${labelColor}" font-size="10" dominant-baseline="middle">${e.label} £${Math.round(e.value).toLocaleString()}</text>`;
   }
 
@@ -340,7 +340,7 @@ function renderRatiosChart({ savingsRate, housingRatio, investRate, debtIncome }
       { label:'Benchmark', data:benchmarks, backgroundColor:'rgba(255,255,255,0.06)', borderRadius:4, borderColor:'rgba(255,255,255,0.2)', borderWidth:1 },
     ]},
     options:{ responsive:true, maintainAspectRatio:false, animation:{duration:700,easing:'easeInOutQuart'},
-      plugins:{ legend:{display:true,labels:{color:C.tick,boxWidth:10,font:{size:11}}}, tooltip:{backgroundColor:'#252830',borderColor:'rgba(255,255,255,0.12)',borderWidth:1,titleColor:'#d9dde2',bodyColor:'#8e9099',padding:10} },
+      plugins:{ legend:{display:true,labels:{color:C.tick,boxWidth:10,font:{size:11}}}, tooltip:{backgroundColor:'rgba(9,12,20,0.96)',borderColor:'rgba(0,191,255,0.25)',borderWidth:1,titleColor:'#00bfff',bodyColor:'#7a96b3',padding:10} },
       scales:{ x:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11}}},
                y:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11},callback:v=>v+'%'},max:100} },
     },

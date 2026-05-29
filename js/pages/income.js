@@ -6,8 +6,8 @@ import {
 } from '../calc.js';
 
 // Hoisted before top-level await — avoids TDZ errors when render() runs
-const C = { info:'#5794f2', teal:'#6ccf8e', negative:'#f2495c', positive:'#73bf69',
-            grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+const C = { info:'#00bfff', teal:'#00e5ff', negative:'#ff1744', positive:'#00e676',
+            grid:'rgba(0,191,255,0.07)', tick:'#3d5473' };
 let _wChart = null;
 
 const state = await initPage('income');
@@ -114,11 +114,11 @@ function renderWaterfallChart(pay, inc) {
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
       animation:{ duration:700, easing:'easeInOutQuart' },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#252830', borderColor:'rgba(255,255,255,0.12)', borderWidth:1,
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'rgba(9,12,20,0.96)', borderColor:'rgba(0,191,255,0.25)', borderWidth:1,
         filter:i=>i.datasetIndex===1, callbacks:{ label:c=>` £${c.raw.toFixed(0)}` } } },
       scales:{
-        x:{ stacked:true, grid:{ color:C.grid }, ticks:{ color:C.tick, font:{size:11} } },
-        y:{ stacked:true, grid:{ color:C.grid }, ticks:{ color:C.tick, font:{size:11}, callback:v=>'£'+v.toFixed(0) } },
+        x:{ stacked:true, grid:{ color:C.grid, drawBorder:false }, ticks:{ color:C.tick, font:{size:11} } },
+        y:{ stacked:true, grid:{ color:C.grid, drawBorder:false }, ticks:{ color:C.tick, font:{size:11}, callback:v=>'£'+v.toFixed(0) } },
       }
     }
   });

@@ -7,7 +7,7 @@ import {
 } from '../calc.js';
 
 // Hoisted before top-level await
-const C = { info:'#5794f2', positive:'#73bf69', warning:'#ff9830', negative:'#f2495c', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+const C = { info:'#00bfff', positive:'#00e676', warning:'#ff9100', negative:'#ff1744', grid:'rgba(0,191,255,0.07)', tick:'#3d5473' };
 const charts = {};
 
 const state = await initPage('goals');
@@ -248,7 +248,7 @@ function renderCharts(st, log, prog) {
   const labels=log.map(r=>r.month);
   const planned=log.map((_,i)=>round2(log.slice(0,i+1).reduce((s,r)=>s+(r.plannedGBP||0),0)));
   const actual=log.map((_,i)=>round2(log.slice(0,i+1).reduce((s,r)=>s+(r.actualGBP||0),0)));
-  const base_={responsive:true,maintainAspectRatio:false,animation:{duration:700,easing:'easeInOutQuart'},plugins:{legend:{display:true,labels:{color:C.tick,boxWidth:10,font:{size:11}}},tooltip:{backgroundColor:'#252830',borderColor:'rgba(255,255,255,0.12)',borderWidth:1,titleColor:'#d9dde2',bodyColor:'#8e9099',padding:10}},scales:{x:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11}}},y:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11},callback:v=>'£'+v.toFixed(0)}}}};
+  const base_={responsive:true,maintainAspectRatio:false,animation:{duration:700,easing:'easeInOutQuart'},plugins:{legend:{display:true,labels:{color:C.tick,boxWidth:10,font:{size:11}}},tooltip:{backgroundColor:'rgba(9,12,20,0.96)',borderColor:'rgba(0,191,255,0.25)',borderWidth:1,titleColor:'#00bfff',bodyColor:'#7a96b3',padding:10}},scales:{x:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11}}},y:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11},callback:v=>'£'+v.toFixed(0)}}}};
   const ctxLn=getCtx('chart-india-line');if(ctxLn)charts['chart-india-line']=new Chart(ctxLn,{type:'line',data:{labels,datasets:[{label:'Planned',data:planned,borderColor:C.info,backgroundColor:'transparent',tension:0.3,pointRadius:3,borderWidth:2,borderDash:[4,4]},{label:'Actual',data:actual,borderColor:C.positive,backgroundColor:C.positive+'22',fill:true,tension:0.3,pointRadius:3,borderWidth:2}]},options:base_});
   const ctxBr=getCtx('chart-india-bar');if(ctxBr)charts['chart-india-bar']=new Chart(ctxBr,{type:'bar',data:{labels,datasets:[{label:'Planned (£)',data:log.map(r=>r.plannedGBP||0),backgroundColor:C.info+'cc',borderRadius:4,animations:{y:{from:0,duration:600,easing:'easeOutQuart'}}},{label:'Actual (£)',data:log.map(r=>r.actualGBP||0),backgroundColor:C.positive+'cc',borderRadius:4}]},options:{...base_,scales:{...base_.scales,y:{...base_.scales.y,ticks:{...base_.scales.y.ticks,callback:v=>'£'+v.toFixed(0)}}}}});
 }

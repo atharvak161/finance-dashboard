@@ -7,7 +7,7 @@ import {
 } from '../calc.js';
 
 // Hoisted before top-level await
-const C = { positive:'#73bf69', negative:'#f2495c', info:'#5794f2', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+const C = { positive:'#00e676', negative:'#ff1744', info:'#00bfff', grid:'rgba(0,191,255,0.07)', tick:'#3d5473' };
 let _chart = null;
 const charts = {};
 
@@ -146,7 +146,7 @@ function renderAgeTrajectoryChart(st, currentNetWorth, monthlySurplus) {
   const milestoneColors = pts.map(pt => {
     if (pt.netWorth >= 1000000) return C.positive;
     if (pt.netWorth >= 100000) return C.info;
-    if (pt.netWorth >= 0) return '#fade2a';
+    if (pt.netWorth >= 0) return '#ffd600';
     return C.negative;
   });
 
@@ -234,7 +234,7 @@ function renderNwChart(st, surplus, nwProj) {
       ]
     },
     options:{ responsive:true, maintainAspectRatio:false, animation:{duration:800,easing:'easeInOutQuart'},
-      plugins:{ legend:{display:true,labels:{color:C.tick,boxWidth:10,font:{size:11}}}, tooltip:{backgroundColor:'#252830',borderColor:'rgba(255,255,255,0.12)',borderWidth:1,titleColor:'#d9dde2',bodyColor:'#8e9099',padding:10} },
+      plugins:{ legend:{display:true,labels:{color:C.tick,boxWidth:10,font:{size:11}}}, tooltip:{backgroundColor:'rgba(9,12,20,0.96)',borderColor:'rgba(0,191,255,0.25)',borderWidth:1,titleColor:'#00bfff',bodyColor:'#7a96b3',padding:10} },
       scales:{ x:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11}}},
                y:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11},callback:v=>'£'+Math.round(v).toLocaleString()}} },
     },

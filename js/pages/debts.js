@@ -7,7 +7,7 @@ import {
 } from '../calc.js';
 
 // Hoisted before top-level await
-const C = { negative:'#f2495c', positive:'#73bf69', info:'#5794f2', grid:'rgba(255,255,255,0.06)', tick:'#5c6170' };
+const C = { negative:'#ff1744', positive:'#00e676', info:'#00bfff', grid:'rgba(0,191,255,0.07)', tick:'#3d5473' };
 const charts = {};
 
 const state = await initPage('debts');
@@ -263,7 +263,7 @@ function renderDebtCharts(sbi) {
   const sch    = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, 0);
   const schEx  = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, sbi.extraMonthlyINR||0);
   const base_  = { responsive:true, maintainAspectRatio:false, animation:{duration:700,easing:'easeInOutQuart'},
-    plugins:{ legend:{display:true,labels:{color:C.tick,boxWidth:10,font:{size:11}}}, tooltip:{backgroundColor:'#252830',borderColor:'rgba(255,255,255,0.12)',borderWidth:1,titleColor:'#d9dde2',bodyColor:'#8e9099',padding:10} },
+    plugins:{ legend:{display:true,labels:{color:C.tick,boxWidth:10,font:{size:11}}}, tooltip:{backgroundColor:'rgba(9,12,20,0.96)',borderColor:'rgba(0,191,255,0.25)',borderWidth:1,titleColor:'#00bfff',bodyColor:'#7a96b3',padding:10} },
     scales:{ x:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11}}}, y:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11}}} },
   };
   const years = Math.min(Math.ceil(sch.length/12),10);
