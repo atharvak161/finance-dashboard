@@ -191,9 +191,18 @@ export function emergencyFundProgress(investments, goals) {
 
 // ── Net worth toward target ──────────────────────────────────
 
-export function wealthProgress(netWorth, targetGBP) {
-  const pct = Math.max(0, Math.min(100, round2(((netWorth + targetGBP) / (2 * targetGBP)) * 100)));
-  return { pct, netWorth: round2(netWorth), target: targetGBP };
+// Phase 1 (netWorth < 0): debt clearance 0→100%
+// Phase 2 (netWorth >= 0): wealth building 0→100%
+// Replaces the old formula that showed 49.7% with a deeply negative net worth.
+export function wealthProgress(netWorth, targetGBP, totalDebtGBP) {
+  if (netWorth < 0) {
+    const original = Math.max(totalDebtGBP || 0, Math.abs(netWorth));
+    const cleared  = Math.max(0, original - Math.abs(netWorth));
+    const pct      = original > 0 ? Math.min(100, round2((cleared / original) * 100)) : 0;
+    return { pct, phase: 'debt', netWorth: round2(netWorth), target: targetGBP };
+  }
+  const pct = Math.min(100, round2((netWorth / targetGBP) * 100));
+  return { pct, phase: 'wealth', netWorth: round2(netWorth), target: targetGBP };
 }
 
 // ── Tax tracker ──────────────────────────────────────────────
