@@ -16,6 +16,7 @@ import { initExport } from './export.js';
 // ── Auth guard ───────────────────────────────────────────────
 
 if (!isAuthenticated()) {
+  sessionStorage.removeItem('session_active');
   window.location.replace('index.html');
 }
 
