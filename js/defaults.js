@@ -5,7 +5,7 @@
 export const DEFAULTS = {
 
   fin_profile: {
-    name: 'Atharva Kishor Kulkarni',
+    name: 'Sir',
     age: 25,
     inrGbpRate: 125,
     targetAge: 50,
@@ -27,7 +27,7 @@ export const DEFAULTS = {
   fin_expenses: {
     items: [
       { id: 'rent',    name: 'Rent',                category: 'Housing',      monthlyGBP: 700,  active: true },
-      { id: 'sbi',     name: 'SBI Loan EMI',         category: 'Debt',         monthlyGBP: 325,  active: true },
+      { id: 'sbi',     name: 'Education Loan EMI',   category: 'Debt',         monthlyGBP: 325,  active: true },
       { id: 'sud',     name: 'SUD Life ULIP',         category: 'Insurance',    monthlyGBP: 149,  active: true },
       { id: 'pnb',     name: 'PNB MetLife ULIP',      category: 'Insurance',    monthlyGBP: 84,   active: true },
       { id: 'axis',    name: 'Axis Max Life ULIP',    category: 'Insurance',    monthlyGBP: 85,   active: true },
@@ -54,7 +54,7 @@ export const DEFAULTS = {
       ratePercent: 9.90,
       emiINR: 34090,
       startDate: '2022-06-22',
-      coApplicant: 'Kishor Kulkarni',
+      coApplicant: '',
       extraMonthlyINR: 0,
     },
   },
