@@ -335,6 +335,11 @@
         }
         await setKey(encKey);
 
+        // Store exportable key in sessionStorage so page-init can recover
+        // if the SW is terminated between page navigations.
+        const rawKey = await crypto.subtle.exportKey('raw', encKey);
+        sessionStorage.setItem('_ek', btoa(String.fromCharCode(...new Uint8Array(rawKey))));
+
         // Navigate after a brief success flash
         setTimeout(() => { window.location.href = 'dashboard.html'; }, 420);
 

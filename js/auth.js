@@ -56,7 +56,7 @@ async function _deriveEncKey(password) {
     { name: 'PBKDF2', salt, iterations: ITERATIONS, hash: 'SHA-256' },
     km,
     { name: 'AES-GCM', length: 256 },
-    false,           // NOT extractable — raw bytes never accessible
+    true,            // extractable: needed for sessionStorage recovery when SW is terminated
     ['encrypt', 'decrypt']
   );
 }

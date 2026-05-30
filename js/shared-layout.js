@@ -89,6 +89,7 @@ export function renderSharedLayout(activeNav, state) {
 
     // Lock button
     document.getElementById('lock-btn').addEventListener('click', async () => {
+      sessionStorage.removeItem('_ek');
       await lock();
       window.location.replace('login.html');
     });
