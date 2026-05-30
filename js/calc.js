@@ -232,6 +232,16 @@ export function taxTrackerProgress(tracker) {
 }
 
 // ── Net worth timeline projection ───────────────────────────
+//
+// Fix history:
+//   v1 bug: cashSavings was initialised to totalAssets (incl. pension),
+//           then assets = cashSavings + pensionVal → pension counted twice.
+//   v1 bug: ULIP compound growth was not modelled; ULIPs sat as static cash.
+//
+// Now: cashSavings = non-pension, non-ULIP assets only.
+//      Pension and ULIPs each tracked separately with their own growth rates.
+//      ULIP premiums are already subtracted from monthlySaving (they are expenses),
+//      so they are added back as asset growth each month while in pay term.
 
 export function projectNetWorthTimeline(params) {
   const {
@@ -241,7 +251,10 @@ export function projectNetWorthTimeline(params) {
     pensionValue,
     pensionMonthly,
     pensionGrowthRate,
-    ulipValues,          // array of { currentValue, monthlyPremium, payTermEndDate, termYears, rate }
+    ulipTotalValueGBP   = 0,   // sum of all ULIP current values in GBP
+    ulipMonthlyPremGBP  = 0,   // sum of all monthly premiums in GBP
+    ulipPayMonthsLeft   = 0,   // months until last pay term ends
+    ulipGrowthRate      = 12,  // average expected ULIP growth rate %/yr
     debtOutstandingINR,
     debtEmiINR,
     debtRatePercent,
@@ -255,17 +268,26 @@ export function projectNetWorthTimeline(params) {
   const start  = startDate ? new Date(startDate) : new Date();
   const result = [];
 
-  let cashSavings     = Math.max(0, startNetWorth + debtOutstandingINR / inrGbpRate);
-  let pensionVal      = pensionValue;
-  let debtBalance     = debtOutstandingINR;
-  let currentSaving   = monthlySaving;
+  // totalAssets = startNetWorth + debtGBP
+  const totalAssetsStart = startNetWorth + debtOutstandingINR / inrGbpRate;
+
+  // Separate the three asset pools — no double-counting
+  let pensionVal   = pensionValue;
+  let ulipVal      = ulipTotalValueGBP;
+  let cashSavings  = Math.max(0, totalAssetsStart - pensionValue - ulipTotalValueGBP);
+
+  let debtBalance  = debtOutstandingINR;
+  let currentSaving= monthlySaving;
+
+  const penRate  = pensionGrowthRate / 12 / 100;
+  const ulipRate = ulipGrowthRate    / 12 / 100;
 
   for (let m = 0; m <= months; m++) {
-    const date     = new Date(start);
+    const date  = new Date(start);
     date.setMonth(date.getMonth() + m);
-    const label    = date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    const label = date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
 
-    // Career transition
+    // Career transition boosts monthly saving
     if (careerTransitionDate) {
       const trans = new Date(careerTransitionDate);
       if (date >= trans && newSalaryGBP && currentSalaryGBP) {
@@ -274,10 +296,19 @@ export function projectNetWorthTimeline(params) {
     }
 
     if (m > 0) {
+      // Cash savings grow by monthly surplus (already net of ULIP premiums)
       cashSavings += currentSaving;
-      pensionVal  *= 1 + pensionGrowthRate / 12 / 100;
-      pensionVal  += pensionMonthly;
 
+      // Pension: compound growth + monthly contribution
+      pensionVal = pensionVal * (1 + penRate) + pensionMonthly;
+
+      // ULIP: compound growth + premium if still in pay term
+      // (premiums are already subtracted from surplus via expenses,
+      //  so adding them here is the correct asset-side accounting)
+      const ulipPrem = m <= ulipPayMonthsLeft ? ulipMonthlyPremGBP : 0;
+      ulipVal = (ulipVal + ulipPrem) * (1 + ulipRate);
+
+      // Debt amortisation
       if (debtBalance > 0) {
         const interest  = Math.round(debtBalance * debtRatePercent / 12 / 100);
         const principal = Math.min(Math.round(debtEmiINR - interest), debtBalance);
@@ -286,7 +317,7 @@ export function projectNetWorthTimeline(params) {
     }
 
     const debtGBP  = round2(debtBalance / inrGbpRate);
-    const assets   = round2(cashSavings + pensionVal);
+    const assets   = round2(cashSavings + pensionVal + ulipVal);
     const netWorth = round2(assets - debtGBP);
 
     result.push({ label, month: m, assets, liabilities: debtGBP, netWorth, date: date.toISOString().slice(0, 7) });
