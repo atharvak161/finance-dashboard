@@ -422,16 +422,33 @@ function initNetWorthChart(state) {
   const surplus   = round2(pay.netWithOT - totalExpenses(effItems));
   const nw        = calculateNetWorth(inv, dbt, rate);
 
+  // ULIP parameters for correct growth modelling
+  const ulipTotalGBP  = inv.ulips.reduce((s, u) => s + ulipValueGBP(u, rate), 0);
+  const ulipPremGBP   = inv.ulips.reduce((s, u) => s + ulipPremiumGBP(u, rate), 0);
+  const ulipAvgRate   = inv.ulips.length
+    ? inv.ulips.reduce((s, u) => s + (u.expectedRatePercent || 12), 0) / inv.ulips.length : 12;
+  const now_ = new Date();
+  const latestPayEnd = inv.ulips.reduce((latest, u) => {
+    const e = new Date(u.payTermEndDate); return e > latest ? e : latest;
+  }, now_);
+  const ulipPayMonths = Math.max(0,
+    (latestPayEnd.getFullYear() - now_.getFullYear()) * 12 +
+    (latestPayEnd.getMonth() - now_.getMonth()));
+
   const timeline = projectNetWorthTimeline({
     startDate: new Date().toISOString().slice(0,7)+'-01',
     startNetWorth: nw.netWorth,
     monthlySaving: surplus,
-    pensionValue: inv.pensions?.[0]?.valueGBP || 0,
-    pensionMonthly: inv.pensions?.[0]?.monthlyGBP || 0,
+    pensionValue:  inv.pensions?.[0]?.valueGBP  || 0,
+    pensionMonthly:inv.pensions?.[0]?.monthlyGBP || 0,
     pensionGrowthRate: 7,
+    ulipTotalValueGBP:  ulipTotalGBP,
+    ulipMonthlyPremGBP: ulipPremGBP,
+    ulipPayMonthsLeft:  ulipPayMonths,
+    ulipGrowthRate:     ulipAvgRate,
     debtOutstandingINR: dbt.outstandingINR || 0,
-    debtEmiINR: dbt.emiINR || 34090,
-    debtRatePercent: dbt.ratePercent || 9.9,
+    debtEmiINR:         dbt.emiINR || 34090,
+    debtRatePercent:    dbt.ratePercent || 9.9,
     inrGbpRate: rate
   });
 

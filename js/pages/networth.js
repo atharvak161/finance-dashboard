@@ -208,20 +208,37 @@ function renderNwChart(st, surplus, nwProj) {
   const dbt   = st.debts?.sbi  || {};
   const nw    = calculateNetWorth(inv, st.debts||{sbi:{}}, rate);
 
+  // ULIP growth parameters (fixes pension double-count + adds ULIP compound growth)
+  const ulipTotalGBP = inv.ulips.reduce((s, u) => s + ulipValueGBP(u, rate), 0);
+  const ulipPremGBP  = inv.ulips.reduce((s, u) => s + ulipPremiumGBP(u, rate), 0);
+  const ulipAvgRate  = inv.ulips.length
+    ? inv.ulips.reduce((s, u) => s + (u.expectedRatePercent || 12), 0) / inv.ulips.length : 12;
+  const nowD = new Date();
+  const latestEnd = inv.ulips.reduce((latest, u) => {
+    const e = new Date(u.payTermEndDate); return e > latest ? e : latest;
+  }, nowD);
+  const ulipPayMo = Math.max(0,
+    (latestEnd.getFullYear() - nowD.getFullYear()) * 12 +
+    (latestEnd.getMonth() - nowD.getMonth()));
+
   const timeline = projectNetWorthTimeline({
     startDate: new Date().toISOString().slice(0,7)+'-01',
     startNetWorth: nw.netWorth,
     monthlySaving: surplus,
-    pensionValue:  inv.pensions?.[0]?.valueGBP || 0,
+    pensionValue:  inv.pensions?.[0]?.valueGBP  || 0,
     pensionMonthly:inv.pensions?.[0]?.monthlyGBP || 0,
     pensionGrowthRate: nwProj.pensionGrowthRate || 7,
+    ulipTotalValueGBP:  ulipTotalGBP,
+    ulipMonthlyPremGBP: ulipPremGBP,
+    ulipPayMonthsLeft:  ulipPayMo,
+    ulipGrowthRate:     ulipAvgRate,
     debtOutstandingINR: dbt.outstandingINR || 0,
-    debtEmiINR: dbt.emiINR || 34090,
-    debtRatePercent: dbt.ratePercent || 9.9,
+    debtEmiINR:         dbt.emiINR || 34090,
+    debtRatePercent:    dbt.ratePercent || 9.9,
     inrGbpRate: rate,
     careerTransitionDate: nwProj.careerTransitionDate || null,
-    newSalaryGBP: nwProj.newSalaryGBP || null,
-    currentSalaryGBP: st.income?.baseSalaryGBP || 28000,
+    newSalaryGBP:         nwProj.newSalaryGBP || null,
+    currentSalaryGBP:     st.income?.baseSalaryGBP || 28000,
   });
 
   _chart = new Chart(ctx, {
