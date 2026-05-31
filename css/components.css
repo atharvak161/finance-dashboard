@@ -422,3 +422,64 @@ textarea.form-input { font-family:var(--font-body); resize:vertical; min-height:
 
 /* ── INR secondary ───────────────────────────────────────── */
 .inr-secondary { font-size:11.5px; color:var(--text-muted); font-family:var(--font-mono); }
+
+/* ── Setup highlighting — sections needing user data ───────── */
+.needs-data {
+  position: relative;
+  border-left: 3px solid #f59e0b !important;
+  transition: border-color 0.3s;
+}
+.needs-data .section-title,
+.needs-data .card-title,
+.needs-data h3,
+.needs-data h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.needs-data .section-title::after,
+.needs-data .card-title::after,
+.needs-data h3::after,
+.needs-data h4::after {
+  content: '● enter data';
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  animation: nd-pulse 2s infinite;
+  font-weight: 400;
+}
+@keyframes nd-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.setup-banner {
+  margin: 0 0 24px;
+  padding: 14px 20px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 10px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #f59e0b;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.setup-banner .setup-count {
+  background: rgba(245,158,11,0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.setup-banner a {
+  color: #f59e0b;
+  margin-left: auto;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.setup-complete-banner {
+  display: none;
+}

@@ -1,73 +1,59 @@
-// Encrypted storage — all reads/writes go through the SW crypto vault.
-// Same public API as before (save/load/loadAll) — page modules require no changes.
-
-import { swEncrypt, swDecrypt } from './sw-client.js';
+// store.js — plain JSON localStorage (no encryption)
 import { DEFAULTS } from './defaults.js';
 
 export { DEFAULTS };
 
-const _FIN_KEYS = [
-  'fin_profile', 'fin_income', 'fin_expenses', 'fin_debts',
-  'fin_investments', 'fin_goals', 'fin_monthly_log', 'fin_settings',
-  'fin_tax_tracker', 'fin_india_log',
+const KEYS = [
+  'fin_profile','fin_income','fin_expenses','fin_debts',
+  'fin_investments','fin_goals','fin_monthly_log',
+  'fin_settings','fin_tax_tracker','fin_india_log'
 ];
 
-// ── Core primitives ──────────────────────────────────────────
-
-export async function save(key, data) {
-  const stored = await swEncrypt(data);
-  localStorage.setItem(key, stored);
+export async function loadAll() {
+  const out = {};
+  for (const k of KEYS) {
+    try {
+      const raw = localStorage.getItem(k);
+      const shortKey = k.replace('fin_', '');
+      out[shortKey] = raw ? JSON.parse(raw) : (DEFAULTS[k] ?? null);
+    } catch {
+      const shortKey = k.replace('fin_', '');
+      out[shortKey] = DEFAULTS[k] ?? null;
+    }
+  }
+  return out;
 }
 
 export async function load(key) {
-  const stored = localStorage.getItem(key);
-  if (!stored) return DEFAULTS[key] ?? null;
+  const fullKey = key.startsWith('fin_') ? key : 'fin_' + key;
   try {
-    return await swDecrypt(stored);
+    const raw = localStorage.getItem(fullKey);
+    return raw ? JSON.parse(raw) : (DEFAULTS[fullKey] ?? null);
   } catch {
-    return DEFAULTS[key] ?? null; // decrypt fail → fall back to default
+    return DEFAULTS[fullKey] ?? null;
   }
 }
 
-// ── Load all sections in parallel ────────────────────────────
-
-export async function loadAll() {
-  const results = await Promise.allSettled(_FIN_KEYS.map(k => load(k)));
-
-  const [
-    profile, income, expenses, debts, investments, goals,
-    monthlyLog, settings, taxTracker, indiaLog,
-  ] = results.map((r, i) =>
-    r.status === 'fulfilled' ? r.value : (DEFAULTS[_FIN_KEYS[i]] ?? null)
-  );
-
-  return {
-    profile, income, expenses, debts, investments, goals,
-    monthlyLog: monthlyLog || [],
-    settings,
-    taxTracker,
-    indiaLog: indiaLog || [],
-  };
+export async function save(key, data) {
+  localStorage.setItem(key.startsWith('fin_') ? key : 'fin_' + key, JSON.stringify(data));
 }
 
-// ── Re-encrypt all keys (used when changing password in future) ──
-
-export async function reEncryptAll(decryptFn, encryptFn) {
-  for (const key of Object.keys(localStorage).filter(k => k.startsWith('fin_'))) {
-    const stored = localStorage.getItem(key);
-    if (!stored || !stored.includes(':')) continue;
-    try {
-      const data    = await decryptFn(stored);
-      const newStored = await encryptFn(data);
-      localStorage.setItem(key, newStored);
-    } catch { /* skip corrupt keys */ }
+export async function saveAll(state) {
+  for (const [k, v] of Object.entries(state)) {
+    await save(k, v);
   }
+}
+
+export async function clearAll() {
+  KEYS.forEach(k => localStorage.removeItem(k));
 }
 
 // ── Initialize defaults (called from Data tab reset) ─────────
-
 export async function initializeDefaults() {
   for (const [key, value] of Object.entries(DEFAULTS)) {
     await save(key, value);
   }
 }
+
+// ── Re-encrypt no longer applies; kept as a no-op for API compatibility ──
+export async function reEncryptAll() {}

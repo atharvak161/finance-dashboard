@@ -87,12 +87,9 @@ export function renderSharedLayout(activeNav, state) {
       sidebar.classList.add('collapsed');
     }
 
-    // Lock button
-    document.getElementById('lock-btn').addEventListener('click', async () => {
-      sessionStorage.removeItem('_ek');
-      await lock();
-      window.location.replace('login.html');
-    });
+    // Lock button (auth removed — no-op, stay on dashboard)
+    const lockBtn = document.getElementById('lock-btn');
+    if (lockBtn) lockBtn.style.display = 'none';
   }
 
   // ── Topbar ────────────────────────────────────────────────
