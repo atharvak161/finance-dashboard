@@ -66,7 +66,7 @@ async function exportSectionPDF(sectionId) {
 
 function exportExcel(state) {
   const wb   = XLSX.utils.book_new();
-  const rate = state.settings?.inrGbpRate || 125;
+  const rate = state.settings?.inrGbpRate || 83;
 
   // 1. Overview / Net Worth
   const inv  = state.investments || { cashAccounts:[], pensions:[], ulips:[] };

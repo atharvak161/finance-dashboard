@@ -47,6 +47,7 @@ export const DEFAULTS = {
 
   fin_debts: {
     sbi: {
+      originalPrincipalINR: 0,
       outstandingINR: 0,
       ratePercent: 0,
       emiINR: 0,

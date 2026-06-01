@@ -10,7 +10,7 @@ import {
 const state = await initPage('export');
 
 const TODAY = new Date().toISOString().slice(0,10);
-const rate  = state.settings?.inrGbpRate || 125;
+const rate  = state.settings?.inrGbpRate || 83;
 
 // ── Excel export ───────────────────────────────────────────────
 

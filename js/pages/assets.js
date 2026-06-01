@@ -14,7 +14,7 @@ render(state);
 
 function render(st) {
   const inv  = st.investments || { cashAccounts:[], pensions:[], ulips:[] };
-  const rate = st.settings?.inrGbpRate || 125;
+  const rate = st.settings?.inrGbpRate || 83;
   const pension = inv.pensions?.[0] || {};
   const cash    = inv.cashAccounts?.[0] || {};
 

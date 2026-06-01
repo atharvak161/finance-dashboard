@@ -18,7 +18,7 @@ render(state);
 
 function render(st) {
   const sbi  = st.debts?.sbi || {};
-  const rate = st.settings?.inrGbpRate || 125;
+  const rate = st.settings?.inrGbpRate || 83;
 
   // ── Fields (2-col grid) ───────────────────────────────────
   document.getElementById('debt-fields').innerHTML = `
@@ -164,7 +164,7 @@ function getCtx(id) { if(charts[id]){charts[id].destroy();delete charts[id];}ret
 
 function renderInterestPrincipalDonut(st) {
   const sbi  = st.debts?.sbi || {};
-  const rate = st.settings?.inrGbpRate || 125;
+  const rate = st.settings?.inrGbpRate || 83;
   const paid = loanPaidToDate(sbi);
   const intGBP  = round2(paid.interestPaid / rate);
   const prinGBP = round2(paid.principalPaid / rate);
@@ -201,7 +201,7 @@ function renderDebtRaceChart(st) {
   const ctx = getCtx('chart-debt-race');
   if (!ctx) return;
   const sbi    = st.debts?.sbi || {};
-  const rate   = st.settings?.inrGbpRate || 125;
+  const rate   = st.settings?.inrGbpRate || 83;
   const inv    = st.investments || { cashAccounts: [], pensions: [], ulips: [] };
   const inc    = st.income || {};
   const pay    = calculateNetPay(inc);

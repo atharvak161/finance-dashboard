@@ -9,6 +9,8 @@ import {
   fmtGBP, fmtINR, fmtPct, round2
 } from '../calc.js';
 
+const safeRate = r => (r && r > 0) ? r : 83;
+
 // Hoisted before top-level await — avoids TDZ errors when render() runs
 const base = {
   responsive:true, maintainAspectRatio:false,
@@ -30,7 +32,7 @@ render(state);
 // ── Render ────────────────────────────────────────────────────
 
 function render(st) {
-  const rate    = st.settings?.inrGbpRate || 125;
+  const rate    = st.settings?.inrGbpRate || 83;
   const inc     = st.income   || {};
   const inv     = st.investments || { cashAccounts:[], pensions:[], ulips:[] };
   const dbt     = st.debts    || { sbi:{} };
@@ -61,9 +63,9 @@ function render(st) {
 
   // ── Gauges ───────────────────────────────────────────────
   // Debt clearance — progress from outstanding debt toward £0
-  const totalDebt   = (dbt.sbi?.outstandingINR || 0) / rate;
-  const originalDebt= 3600000 / rate; // sanctioned ₹36L
-  const debtPct     = totalDebt <= 0 ? 100 :
+  const totalDebt   = (dbt.sbi?.outstandingINR || 0) / safeRate(rate);
+  const originalDebt= (st.debts?.sbi?.originalPrincipalINR || st.debts?.sbi?.outstandingINR || 0) / safeRate(rate);
+  const debtPct     = originalDebt <= 0 || totalDebt <= 0 ? (totalDebt <= 0 ? 100 : 0) :
     Math.max(0, Math.min(100, round2(((originalDebt - totalDebt) / originalDebt) * 100)));
 
   const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };

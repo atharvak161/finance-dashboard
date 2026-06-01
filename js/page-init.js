@@ -14,7 +14,7 @@ function highlightEmptyData(state) {
     investments: () => !state.investments?.cashAccounts?.[0]?.balanceGBP &&
                        !state.investments?.pensions?.[0]?.valueGBP,
     goals:       () => !state.goals?.wealthTargetGBP,
-    tax:         () => !state.tax_tracker?.underpaymentTotal && !state.tax_tracker?.taxCode,
+    tax:         () => !state.taxTracker?.underpaymentTotal && !state.taxTracker?.taxCode,
     profile:     () => !state.profile?.age || !state.profile?.name,
   };
 
