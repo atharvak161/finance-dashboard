@@ -254,7 +254,7 @@ function renderData(content) {
   content.innerHTML = `<div class="grid-3">
     <div class="panel">
       <div class="panel-header"><span class="panel-title">Export</span></div>
-      <p class="label-muted" style="margin-bottom:14px">Export all your encrypted data as JSON.</p>
+      <p class="label-muted" style="margin-bottom:14px">Export all your locally stored data as JSON.</p>
       <button class="btn btn-secondary" id="data-export-btn">Export JSON backup</button>
     </div>
     <div class="panel">
