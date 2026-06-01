@@ -105,7 +105,7 @@ function bindExpenseEvents(st) {
   document.querySelectorAll('.exp-active-input').forEach(el => {
     el.addEventListener('change', async () => {
       st.expenses.items[parseInt(el.dataset.idx)].active = el.checked;
-      await save_;
+      await save_();
     });
   });
   document.querySelectorAll('.exp-delete-btn').forEach(btn => {

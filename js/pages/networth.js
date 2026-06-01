@@ -3,6 +3,7 @@ import { save }      from '../store.js';
 import {
   calculateNetPay, calculateNetWorth, applyScheduledChanges, totalExpenses,
   calculateSurplus, projectNetWorthTimeline, ageWealthTrajectory,
+  ulipValueGBP, ulipPremiumGBP,
   fmtGBP, round2
 } from '../calc.js';
 

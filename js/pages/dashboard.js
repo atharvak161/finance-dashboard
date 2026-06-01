@@ -66,12 +66,13 @@ function render(st) {
   const debtPct     = totalDebt <= 0 ? 100 :
     Math.max(0, Math.min(100, round2(((originalDebt - totalDebt) / originalDebt) * 100)));
 
-  document.getElementById('gauge-val-debt').textContent = fmtPct(debtPct);
-  document.getElementById('gauge-lbl-debt').textContent = `${fmtGBP(totalDebt)} remaining`;
-  document.getElementById('gauge-val-emergency').textContent = fmtPct(emergency.pct);
-  document.getElementById('gauge-lbl-emergency').textContent = `${fmtGBP(emergency.savings)} of ${fmtGBP(emergency.target)}`;
-  document.getElementById('gauge-val-india').textContent = fmtPct(india.pct);
-  document.getElementById('gauge-lbl-india').textContent = `${fmtGBP(goals.indiaTrip?.savedGBP||0)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`;
+  const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  setText('gauge-val-debt', fmtPct(debtPct));
+  setText('gauge-lbl-debt', `${fmtGBP(totalDebt)} remaining`);
+  setText('gauge-val-emergency', fmtPct(emergency.pct));
+  setText('gauge-lbl-emergency', `${fmtGBP(emergency.savings)} of ${fmtGBP(emergency.target)}`);
+  setText('gauge-val-india', fmtPct(india.pct));
+  setText('gauge-lbl-india', `${fmtGBP(goals.indiaTrip?.savedGBP||0)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`);
 
   // ── Emergency Runway KPI ─────────────────────────────────
   const cashBalance = inv.cashAccounts.reduce((s, a) => s + (a.balanceGBP || 0), 0);

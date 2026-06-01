@@ -9,7 +9,7 @@ function highlightEmptyData(state) {
   // Check which sections have zero/empty critical fields
   const checks = {
     income:      () => !state.income?.baseSalaryGBP,
-    expenses:    () => state.expenses?.items?.every(i => !i.monthlyGBP),
+    expenses:    () => !state.expenses?.items?.length || state.expenses.items.every(i => !i.monthlyGBP),
     debts:       () => !state.debts?.sbi?.outstandingINR,
     investments: () => !state.investments?.cashAccounts?.[0]?.balanceGBP &&
                        !state.investments?.pensions?.[0]?.valueGBP,

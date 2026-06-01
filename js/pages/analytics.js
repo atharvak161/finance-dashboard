@@ -98,7 +98,7 @@ function render(st) {
           <thead><tr><th colspan="2">Monthly Cash Flow</th></tr></thead>
           <tbody>
             <tr><td class="stat-label">Total expenses</td><td class="td-right mono text-negative">${fmtGBP(totalExp)}</td></tr>
-            <tr><td class="stat-label">Housing</td><td class="td-right mono">${fmtGBP(housingCost)}</td></div></tr>
+            <tr><td class="stat-label">Housing</td><td class="td-right mono">${fmtGBP(housingCost)}</td></tr>
             <tr><td class="stat-label">Monthly surplus</td><td class="td-right mono ${surplus>=0?'text-positive':'text-negative'}">${fmtGBP(surplus)}</td></tr>
             <tr><td class="stat-label">Annual surplus</td><td class="td-right mono ${surplus>=0?'text-positive':'text-negative'}">${fmtGBP(surplus*12)}</td></tr>
           </tbody>

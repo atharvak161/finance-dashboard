@@ -24,7 +24,7 @@
         </div>
       </div>
 
-      <div class="grid-4" id="overview-cards"></div>
+      <div class="grid-4" id="overview-cards" data-section="income"></div>
 
       <div id="emergency-runway-kpi" style="margin-top:12px"></div>
 
@@ -41,14 +41,14 @@
       </div>
 
       <div class="grid-3 mt-20">
-        <div class="panel gauge-wrap" id="gauge-debt">
+        <div class="panel gauge-wrap" id="gauge-debt" data-section="debts">
           <div class="panel-title" style="margin-bottom:8px">Debt Clearance</div>
           <div class="gauge-chart-container"><canvas id="chart-gauge-debt"></canvas></div>
           <div class="gauge-value" id="gauge-val-debt">0%</div>
           <div class="gauge-label" id="gauge-lbl-debt">progress toward £0</div>
           <div class="gauge-phase text-warning" id="gauge-phase-debt">Clearing debt</div>
         </div>
-        <div class="panel gauge-wrap" id="gauge-emergency">
+        <div class="panel gauge-wrap" id="gauge-emergency" data-section="investments">
           <div class="panel-title" style="margin-bottom:8px">Emergency Fund</div>
           <div class="gauge-chart-container"><canvas id="chart-gauge-emergency"></canvas></div>
           <div class="gauge-value" id="gauge-val-emergency">0%</div>
