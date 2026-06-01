@@ -3,6 +3,9 @@
 export function round2(n) { return Math.round(n * 100) / 100; }
 export function round0(n) { return Math.round(n); }
 
+// Never divide by a zero/invalid INR→GBP rate. Fall back to a sensible default.
+const safeRate = r => (r && r > 0) ? r : 83;
+
 // ── Net pay ──────────────────────────────────────────────────
 
 export function calculateNetPay({
@@ -10,28 +13,60 @@ export function calculateNetPay({
   pensionEmployeeRate, pensionEmployerRate,
   taxFreeAllowanceAnnual, underpaymentMonthlyGBP
 }) {
-  const baseMonthly    = baseSalaryGBP / 12;
-  const totalGross     = baseMonthly + (avgOvertimeGrossGBP || 0);
-  const taxFreeMonthly = taxFreeAllowanceAnnual / 12;
-  const incomeTax      = Math.max(0, totalGross - taxFreeMonthly) * 0.20;
-  const niable         = Math.max(0, Math.min(totalGross, 4189) - 1048);
-  const ni             = niable * 0.08;
-  const pension        = baseMonthly * ((pensionEmployeeRate || 0) / 100);
-  const extraTax       = underpaymentMonthlyGBP || 0;
+  const baseMonthly       = (baseSalaryGBP || 0) / 12;
+  const avgOvertimeMonthly = avgOvertimeGrossGBP || 0;
+
+  // Salary sacrifice: pension reduces taxable AND NIable pay
+  const annualGross = (baseMonthly + avgOvertimeMonthly) * 12;
+  const annualPension = (baseSalaryGBP || 0) * ((pensionEmployeeRate || 0) / 100); // salary sacrifice on base only
+  const adjustedGross = Math.max(0, annualGross - annualPension); // taxable and NIable
+
+  // Personal Allowance (tapered above £100,000 — £1 PA lost per £2 over £100k)
+  let pa = taxFreeAllowanceAnnual || 12570;
+  if (adjustedGross > 100000) {
+    pa = Math.max(0, pa - Math.floor((adjustedGross - 100000) / 2));
+  }
+
+  // Income Tax — band by band
+  const taxable = Math.max(0, adjustedGross - pa);
+  const basicBandMax = Math.max(0, 50270 - pa); // width of basic rate band above PA
+  const basicTax = Math.min(taxable, basicBandMax) * 0.20;
+  const higherTax = Math.min(Math.max(0, taxable - basicBandMax), 125140 - 50270) * 0.40;
+  const additionalTax = Math.max(0, taxable - Math.max(0, 125140 - pa)) * 0.45;
+  const annualIncomeTax = basicTax + higherTax + additionalTax;
+
+  // National Insurance (2024/25 rates — employee)
+  // 8% on £12,570–£50,270 (primary threshold to upper earnings limit)
+  // 2% on everything above £50,270
+  const niPT = 12570; // primary threshold
+  const niUEL = 50270; // upper earnings limit
+  const annualNI =
+    Math.max(0, Math.min(adjustedGross, niUEL) - niPT) * 0.08 +
+    Math.max(0, adjustedGross - niUEL) * 0.02;
+
+  // Monthly figures
+  const monthlyIncomeTax = round2(annualIncomeTax / 12);
+  const monthlyNI = round2(annualNI / 12);
+  const monthlyPension = round2(annualPension / 12);
+  const totalMonthlyGross = round2(baseMonthly + avgOvertimeMonthly);
+  const netMonthly = round2(totalMonthlyGross - monthlyIncomeTax - monthlyNI - monthlyPension);
+
+  const extraTax        = underpaymentMonthlyGBP || 0;
   const employerPension = baseMonthly * ((pensionEmployerRate || 0) / 100);
+  const hourlyRate      = hoursPerWeek > 0 ? round2((baseSalaryGBP || 0) / (hoursPerWeek * 52)) : 0;
 
   return {
     grossBase:       round2(baseMonthly),
-    grossWithOT:     round2(totalGross),
-    incomeTax:       round2(incomeTax),
-    ni:              round2(ni),
-    pension:         round2(pension),
+    grossWithOT:     totalMonthlyGross,
+    incomeTax:       monthlyIncomeTax,
+    ni:              monthlyNI,
+    pension:         monthlyPension,
     employerPension: round2(employerPension),
     extraTax:        round2(extraTax),
-    netBase:         round2(baseMonthly - incomeTax - ni - pension - extraTax),
-    netWithOT:       round2(totalGross - incomeTax - ni - pension - extraTax),
-    hourlyRate:      round2(baseSalaryGBP / 1950),
-    totalDeductions: round2(incomeTax + ni + pension + extraTax)
+    netBase:         round2(baseMonthly - monthlyIncomeTax - monthlyNI - monthlyPension - extraTax),
+    netWithOT:       round2(netMonthly - extraTax),
+    hourlyRate,
+    totalDeductions: round2(monthlyIncomeTax + monthlyNI + monthlyPension + extraTax)
   };
 }
 
@@ -49,6 +84,13 @@ export function generateAmortisation(outstandingINR, ratePercent, emiINR, extraI
   while (balance > 0.01 && month < 600) {
     month++;
     const interest  = Math.round(balance * monthlyRate);
+    // Negative amortisation guard: if the EMI does not even cover the monthly
+    // interest, the balance never reduces — bail out instead of looping forever.
+    if (totalEMI <= interest && balance > 0) {
+      const empty = [];
+      empty.error = 'EMI_TOO_LOW';
+      return empty;
+    }
     const principal = Math.min(Math.round(totalEMI - interest), Math.round(balance));
     balance         = Math.max(0, Math.round(balance - principal));
     totalInterest  += interest;
@@ -79,15 +121,16 @@ export function amortMonthsSaved(schedule1, schedule2) {
 export function projectULIP(currentValue, monthlyPremium, ratePercent, payTermEndDate, totalTermYears) {
   const monthlyRate = ratePercent / 12 / 100;
   const today       = new Date();
-  const payEnd      = new Date(payTermEndDate);
+  const payEnd      = payTermEndDate ? new Date(payTermEndDate) : null;
   let value         = currentValue;
   const points      = [{ year: 0, value: Math.round(value) }];
 
   for (let m = 1; m <= totalTermYears * 12; m++) {
     const date = new Date(today);
     date.setMonth(date.getMonth() + m);
-    if (date <= payEnd) value = (value + monthlyPremium) * (1 + monthlyRate);
-    else                value = value * (1 + monthlyRate);
+    const withinPayTerm = payEnd && !isNaN(payEnd.getTime()) && date <= payEnd;
+    if (withinPayTerm) value = (value + monthlyPremium) * (1 + monthlyRate);
+    else               value = value * (1 + monthlyRate);
     if (m % 12 === 0) points.push({ year: m / 12, value: Math.round(value) });
   }
   return points;
@@ -103,12 +146,12 @@ export function projectionAtYear(points, year) {
 
 export function ulipValueGBP(ulip, inrGbpRate) {
   if (ulip.currency === 'GBP') return ulip.currentValue;
-  return round2(ulip.currentValue / inrGbpRate);
+  return round2(ulip.currentValue / safeRate(inrGbpRate));
 }
 
 export function ulipPremiumGBP(ulip, inrGbpRate) {
   if (ulip.currency === 'GBP') return ulip.monthlyPremium;
-  return round2(ulip.monthlyPremium / inrGbpRate);
+  return round2(ulip.monthlyPremium / safeRate(inrGbpRate));
 }
 
 // ── Net worth ────────────────────────────────────────────────
@@ -121,7 +164,7 @@ export function calculateNetWorth(investments, debts, inrGbpRate) {
   const ulipTotal    = ulips.reduce((s, u) => s + ulipValueGBP(u, inrGbpRate), 0);
   const totalAssets  = round2(cashTotal + pensionTotal + ulipTotal);
 
-  const sbiGBP       = round2((debts.sbi?.outstandingINR || 0) / inrGbpRate);
+  const sbiGBP       = round2((debts.sbi?.outstandingINR || 0) / safeRate(inrGbpRate));
   const totalDebts   = sbiGBP;
 
   return {
@@ -201,6 +244,9 @@ export function wealthProgress(netWorth, targetGBP, totalDebtGBP) {
     const pct      = original > 0 ? Math.min(100, round2((cleared / original) * 100)) : 0;
     return { pct, phase: 'debt', netWorth: round2(netWorth), target: targetGBP };
   }
+  if (!targetGBP || targetGBP <= 0) {
+    return { pct: netWorth > 0 ? 100 : 0, phase: 'wealth', netWorth: round2(netWorth), target: targetGBP };
+  }
   const pct = Math.min(100, round2((netWorth / targetGBP) * 100));
   return { pct, phase: 'wealth', netWorth: round2(netWorth), target: targetGBP };
 }
@@ -269,7 +315,7 @@ export function projectNetWorthTimeline(params) {
   const result = [];
 
   // totalAssets = startNetWorth + debtGBP
-  const totalAssetsStart = startNetWorth + debtOutstandingINR / inrGbpRate;
+  const totalAssetsStart = startNetWorth + debtOutstandingINR / safeRate(inrGbpRate);
 
   // Separate the three asset pools — no double-counting
   let pensionVal   = pensionValue;
@@ -316,7 +362,7 @@ export function projectNetWorthTimeline(params) {
       }
     }
 
-    const debtGBP  = round2(debtBalance / inrGbpRate);
+    const debtGBP  = round2(debtBalance / safeRate(inrGbpRate));
     const assets   = round2(cashSavings + pensionVal + ulipVal);
     const netWorth = round2(assets - debtGBP);
 
@@ -444,8 +490,13 @@ export function loanPaidToDate(sbi) {
   const start     = new Date(sbi.startDate);
   const today     = new Date();
   const monthsIn  = Math.max(0, (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth()));
-  const sanctioned = 3600000; // ₹36L original
-  const fullSched  = generateAmortisation(sanctioned, sbi.ratePercent || 9.9, sbi.emiINR || 34090, 0);
+  // Use the real sanctioned principal when known; never assume a hardcoded ₹36L.
+  // When originalPrincipalINR is unset (0), we cannot reconstruct history — return zeros gracefully.
+  const sanctioned = sbi.originalPrincipalINR || 0;
+  if (!sanctioned || !sbi.ratePercent || !sbi.emiINR) {
+    return { interestPaid: 0, principalPaid: 0, remaining: sbi.outstandingINR || 0 };
+  }
+  const fullSched  = generateAmortisation(sanctioned, sbi.ratePercent, sbi.emiINR, 0);
   const paid = fullSched.slice(0, monthsIn);
   return {
     interestPaid:  paid.reduce((s, r) => s + r.interest,  0),

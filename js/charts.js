@@ -162,7 +162,7 @@ function initOverviewCharts(state) {
   }
 
   // Gauges
-  const rate   = state.settings?.inrGbpRate || 125;
+  const rate   = state.settings?.inrGbpRate || 83;
   const inv    = state.investments || { cashAccounts:[], pensions:[], ulips:[] };
   const dbt    = state.debts || { sbi:{} };
   const goals  = state.goals || {};
@@ -341,7 +341,7 @@ function initDebtCharts(state) {
 
 function initInvestmentCharts(state) {
   const inv  = state.investments || { ulips:[] };
-  const rate = state.settings?.inrGbpRate || 125;
+  const rate = state.settings?.inrGbpRate || 83;
 
   // Per-ULIP charts
   inv.ulips.forEach(u => {
@@ -412,7 +412,7 @@ function initNetWorthChart(state) {
   const ctx = getCtx('chart-nw-timeline');
   if (!ctx) return;
 
-  const rate  = state.settings?.inrGbpRate || 125;
+  const rate  = state.settings?.inrGbpRate || 83;
   const inc   = state.income || {};
   const inv   = state.investments || { cashAccounts:[], pensions:[], ulips:[] };
   const dbt   = state.debts?.sbi || {};

@@ -16,7 +16,7 @@ const state = await initPage('networth');
 render(state);
 
 function render(st) {
-  const rate  = st.settings?.inrGbpRate || 125;
+  const rate  = st.settings?.inrGbpRate || 83;
   const inc   = st.income   || {};
   const inv   = st.investments || { cashAccounts:[], pensions:[], ulips:[] };
   const dbt   = st.debts    || { sbi:{} };
@@ -204,7 +204,7 @@ function renderNwChart(st, surplus, nwProj) {
   if (!ctx) return;
   if (_chart) { _chart.destroy(); }
 
-  const rate  = st.settings?.inrGbpRate || 125;
+  const rate  = st.settings?.inrGbpRate || 83;
   const inv   = st.investments || { cashAccounts:[], pensions:[], ulips:[] };
   const dbt   = st.debts?.sbi  || {};
   const nw    = calculateNetWorth(inv, st.debts||{sbi:{}}, rate);

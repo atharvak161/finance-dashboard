@@ -15,7 +15,7 @@ const state = await initPage('analytics');
 render(state);
 
 function render(st) {
-  const rate  = st.settings?.inrGbpRate || 125;
+  const rate  = st.settings?.inrGbpRate || 83;
   const inc   = st.income   || {};
   const inv   = st.investments || { cashAccounts:[], pensions:[], ulips:[] };
   const dbt   = st.debts    || { sbi:{} };
@@ -31,7 +31,7 @@ function render(st) {
 
   // ── Ratio calculations ─────────────────────────────────────
   const savingsRate   = netMonthly > 0 ? round2((surplus / netMonthly) * 100) : 0;
-  const debtIncome    = grossMonthly > 0 ? round2((pay.grossBase/12 > 0 ? (dbt.sbi?.emiINR||0)/rate / (pay.grossBase/12) * 100 : 0)) : 0;
+  const debtIncome    = grossMonthly > 0 ? round2((pay.grossBase > 0 ? (dbt.sbi?.emiINR||0)/rate / pay.grossBase * 100 : 0)) : 0;
   const housingCost   = (st.expenses?.items?.find(i=>i.id==='rent')?.monthlyGBP || 0);
   const housingRatio  = netMonthly > 0 ? round2((housingCost / netMonthly) * 100) : 0;
   const investRate    = grossMonthly > 0 ? round2(((pay.pension + pay.employerPension) / grossMonthly) * 100) : 0;

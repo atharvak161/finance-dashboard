@@ -9,16 +9,29 @@ const KEYS = [
   'fin_settings','fin_tax_tracker','fin_india_log'
 ];
 
+// Multi-word keys are stored snake_case in localStorage but consumed
+// camelCase by the pages. Map between the two so consumers stay consistent.
+const camelMap = {
+  'monthly_log': 'monthlyLog',
+  'tax_tracker': 'taxTracker',
+  'india_log':   'indiaLog',
+};
+const reverseMap = {
+  'monthlyLog': 'fin_monthly_log',
+  'taxTracker': 'fin_tax_tracker',
+  'indiaLog':   'fin_india_log',
+};
+
 export async function loadAll() {
   const out = {};
   for (const k of KEYS) {
+    const shortKey = k.replace('fin_', '');
+    const finalKey = camelMap[shortKey] || shortKey;
     try {
       const raw = localStorage.getItem(k);
-      const shortKey = k.replace('fin_', '');
-      out[shortKey] = raw ? JSON.parse(raw) : (DEFAULTS[k] ?? null);
+      out[finalKey] = raw ? JSON.parse(raw) : (DEFAULTS[k] ?? null);
     } catch {
-      const shortKey = k.replace('fin_', '');
-      out[shortKey] = DEFAULTS[k] ?? null;
+      out[finalKey] = DEFAULTS[k] ?? null;
     }
   }
   return out;
@@ -35,7 +48,8 @@ export async function load(key) {
 }
 
 export async function save(key, data) {
-  localStorage.setItem(key.startsWith('fin_') ? key : 'fin_' + key, JSON.stringify(data));
+  const lsKey = reverseMap[key] || (key.startsWith('fin_') ? key : 'fin_' + key);
+  localStorage.setItem(lsKey, JSON.stringify(data));
 }
 
 export async function saveAll(state) {
