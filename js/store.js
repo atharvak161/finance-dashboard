@@ -38,12 +38,13 @@ export async function loadAll() {
 }
 
 export async function load(key) {
-  const fullKey = key.startsWith('fin_') ? key : 'fin_' + key;
+  // Route camelCase keys through reverseMap before building the localStorage key
+  const lsKey = reverseMap[key] || (key.startsWith('fin_') ? key : 'fin_' + key);
   try {
-    const raw = localStorage.getItem(fullKey);
-    return raw ? JSON.parse(raw) : (DEFAULTS[fullKey] ?? null);
+    const raw = localStorage.getItem(lsKey);
+    return raw ? JSON.parse(raw) : (DEFAULTS[lsKey] ?? null);
   } catch {
-    return DEFAULTS[fullKey] ?? null;
+    return DEFAULTS[lsKey] ?? null;
   }
 }
 
