@@ -1,5 +1,6 @@
-import { initPage }      from '../page-init.js';
+import { initPage, saveSec } from '../page-init.js';
 import { save, initializeDefaults } from '../store.js';
+import { fetchLiveRate, clearFxCache } from '../fx-rate.js';
 
 const state = await initPage('settings');
 
@@ -21,7 +22,7 @@ renderTab('profile');
 // ── Auto-save helper ──────────────────────────────────────────
 
 async function autoSave(storeKey, obj) {
-  await save(storeKey, obj);
+  await saveSec(storeKey, obj); // saves and re-runs highlighting
   renderTab(_currentTab); // re-render only current tab
 }
 
@@ -52,6 +53,41 @@ function field(label, type, value, onChange, hint='') {
   </div>`;
 }
 
+// ── Live FX rate helper ───────────────────────────────────────
+
+function _attachFxButton(btnId, inputId, statusId) {
+  setTimeout(() => {
+    const btn    = document.getElementById(btnId);
+    const status = document.getElementById(statusId);
+    const input  = document.getElementById(inputId);
+    if (!btn || !status || !input) return;
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Fetching…';
+      status.textContent = '';
+
+      const result = await fetchLiveRate();
+
+      btn.disabled = false;
+      btn.textContent = 'Fetch live rate';
+
+      if (result.source === 'error' || result.rate === null) {
+        status.textContent = 'Could not fetch live rate. Enter manually.';
+        status.style.color = 'var(--color-negative)';
+      } else {
+        input.value = result.rate;
+        // Trigger the input event so the onChange handler updates the state object
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        const label = result.source === 'cache' ? 'Cached rate' : 'Live rate';
+        const dateStr = result.date ? ` as of ${result.date}` : '';
+        status.textContent = `${label}: ${result.rate}${dateStr} — click Save to apply`;
+        status.style.color = 'var(--color-positive, #4caf50)';
+      }
+    });
+  }, 0);
+}
+
 // ── Tab renderers ─────────────────────────────────────────────
 
 function renderTab(tab) {
@@ -73,15 +109,43 @@ function renderTab(tab) {
 
 function renderProfile(content) {
   const p = state.profile || {};
+  const rateInputId = 'fx-rate-input-profile';
+  const rateStatusId = 'fx-rate-status-profile';
+  setTimeout(() => {
+    const el = document.getElementById(rateInputId);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      const v = parseFloat(el.value) || 0;
+      p.inrGbpRate = v;
+      state.settings.inrGbpRate = v;
+      autoSave('fin_profile', p);
+      autoSave('fin_settings', state.settings);
+    });
+    el.addEventListener('change', () => {
+      const v = parseFloat(el.value) || 0;
+      p.inrGbpRate = v;
+      state.settings.inrGbpRate = v;
+      autoSave('fin_profile', p);
+      autoSave('fin_settings', state.settings);
+    });
+  }, 0);
   content.innerHTML = `<div class="panel"><div class="panel-title" style="margin-bottom:20px">Profile</div>
     <div class="grid-2">
       ${field('Full name',              'text',   p.name,              v=>{p.name=v;           autoSave('fin_profile',p);})}
       ${field('Age',                    'number', p.age,               v=>{p.age=v;            autoSave('fin_profile',p);})}
-      ${field('INR/GBP rate',           'number', p.inrGbpRate,        v=>{p.inrGbpRate=v; state.settings.inrGbpRate=v; autoSave('fin_profile',p); autoSave('fin_settings',state.settings);})}
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">INR/GBP rate</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="${rateInputId}" class="form-input" value="${p.inrGbpRate ?? ''}" step="any" style="flex:1" />
+          <button id="fx-btn-profile" class="btn btn-secondary btn-sm" type="button">Fetch live rate</button>
+        </div>
+        <span id="${rateStatusId}" class="label-muted" style="font-size:12px;margin-top:2px"></span>
+      </div>
       ${field('Target age for wealth',  'number', p.targetAge,         v=>{p.targetAge=v;      autoSave('fin_profile',p);})}
       ${field('Wealth target (£)',       'number', p.wealthTargetGBP,   v=>{p.wealthTargetGBP=v; state.goals.wealthTargetGBP=v; autoSave('fin_profile',p); autoSave('fin_goals',state.goals);})}
     </div>
   </div>`;
+  _attachFxButton('fx-btn-profile', rateInputId, rateStatusId);
 }
 
 function renderIncome(content) {
@@ -203,13 +267,41 @@ function renderTaxSettings(content) {
 
 function renderDisplay(content) {
   const s = state.settings || {};
+  const rateInputId  = 'fx-rate-input-display';
+  const rateStatusId = 'fx-rate-status-display';
+  setTimeout(() => {
+    const el = document.getElementById(rateInputId);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      const v = parseFloat(el.value) || 0;
+      s.inrGbpRate = v;
+      state.profile.inrGbpRate = v;
+      autoSave('fin_settings', s);
+      autoSave('fin_profile', state.profile);
+    });
+    el.addEventListener('change', () => {
+      const v = parseFloat(el.value) || 0;
+      s.inrGbpRate = v;
+      state.profile.inrGbpRate = v;
+      autoSave('fin_settings', s);
+      autoSave('fin_profile', state.profile);
+    });
+  }, 0);
   content.innerHTML = `<div class="panel"><div class="panel-title" style="margin-bottom:20px">Display</div>
     <div class="grid-2">
-      ${field('INR/GBP rate',                'number',   s.inrGbpRate,                v=>{s.inrGbpRate=v; state.profile.inrGbpRate=v; autoSave('fin_settings',s); autoSave('fin_profile',state.profile);})}
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">INR/GBP rate</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="${rateInputId}" class="form-input" value="${s.inrGbpRate ?? ''}" step="any" style="flex:1" />
+          <button id="fx-btn-display" class="btn btn-secondary btn-sm" type="button">Fetch live rate</button>
+        </div>
+        <span id="${rateStatusId}" class="label-muted" style="font-size:12px;margin-top:2px"></span>
+      </div>
       ${field('Inactivity timeout (minutes)','number',   s.inactivityTimeoutMinutes,  v=>{s.inactivityTimeoutMinutes=v; autoSave('fin_settings',s);})}
       ${field('Show INR equivalents',        'checkbox', s.showInrEquivalents,        v=>{s.showInrEquivalents=v; autoSave('fin_settings',s);})}
     </div>
   </div>`;
+  _attachFxButton('fx-btn-display', rateInputId, rateStatusId);
 }
 
 function renderChartParams(content) {
