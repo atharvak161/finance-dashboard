@@ -529,3 +529,100 @@ textarea.form-input { font-family:var(--font-body); resize:vertical; min-height:
 .setup-complete-banner {
   display: none;
 }
+
+/* ── India NRI Tax Module ─────────────────────────────────── */
+.jurisdiction-divider {
+  border-left: 3px solid #ff9100;
+  padding-left: 12px;
+  margin: 24px 0 16px 0;
+}
+.jurisdiction-label {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ff9100;
+}
+.panel-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  margin-bottom: 8px;
+}
+.india-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(0,191,255,0.04);
+  border-left: 2px solid rgba(0,191,255,0.25);
+  border-radius: 4px;
+}
+.field-help {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+.field-error {
+  font-size: 10.5px;
+  color: var(--color-negative);
+  margin-top: 4px;
+}
+.india-banner {
+  font-size: 11.5px;
+  line-height: 1.5;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin: 0 0 4px;
+}
+.india-banner.warning {
+  background: rgba(255,145,0,0.08);
+  border: 1px solid rgba(255,145,0,0.28);
+  color: var(--color-warning);
+}
+.india-banner.danger {
+  background: rgba(255,23,68,0.08);
+  border: 1px solid rgba(255,23,68,0.3);
+  color: var(--color-negative);
+}
+.india-banner.info {
+  background: rgba(0,191,255,0.06);
+  border: 1px solid rgba(0,191,255,0.22);
+  color: var(--text-secondary);
+}
+/* Greyed-out panel when a regime/toggle disables it */
+.panel-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.panel-disabled input,
+.panel-disabled select {
+  cursor: not-allowed;
+}
+/* Large ITR status badge */
+.itr-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 18px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+.itr-status-badge.amber  { background: rgba(255,145,0,0.12);  color: var(--color-warning); border:1px solid rgba(255,145,0,0.3); }
+.itr-status-badge.red    { background: rgba(255,23,68,0.12);  color: var(--color-negative); border:1px solid rgba(255,23,68,0.35); }
+.itr-status-badge.green  { background: rgba(0,230,118,0.12);  color: var(--color-positive); border:1px solid rgba(0,230,118,0.3); }
+.itr-status-badge.grey   { background: rgba(0,191,255,0.06);  color: var(--text-secondary); border:1px solid rgba(0,191,255,0.15); }
+.form-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.form-check-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #ff9100; cursor: pointer; }

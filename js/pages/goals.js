@@ -1,4 +1,4 @@
-import { initPage }  from '../page-init.js';
+import { initPage, saveSec } from '../page-init.js';
 import { save }      from '../store.js';
 import {
   indiaTripProgress, compoundGrowthProjection, emergencyRunwayMonths,
@@ -122,7 +122,7 @@ function bindIndiaFields(st) {
       if (!st.goals.indiaTrip) st.goals.indiaTrip = {};
       const k = el.dataset.key;
       st.goals.indiaTrip[k] = el.type==='number' ? (parseFloat(el.value)||0) : el.value;
-      await save('fin_goals', st.goals);
+      await saveSec('fin_goals', st.goals);
       render(st);
     });
   });

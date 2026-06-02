@@ -6,6 +6,11 @@ import { loadAll, save } from './store.js';
 import { renderSharedLayout } from './shared-layout.js';
 
 function highlightEmptyData(state) {
+  // First clear all existing needs-data highlights
+  document.querySelectorAll('.needs-data').forEach(el => el.classList.remove('needs-data'));
+  // Remove existing banner
+  document.querySelector('.setup-banner')?.remove();
+
   // Check which sections have zero/empty critical fields
   const checks = {
     income:      () => !state.income?.baseSalaryGBP,
@@ -57,6 +62,9 @@ export async function initPage(activeNav) {
 
 export async function saveSec(key, data) {
   await save(key, data);
+  // Re-run highlighting after any save so filled sections clear immediately
+  const state = await loadAll();
+  highlightEmptyData(state);
 }
 
 export function updateSidebarProfile(name) {

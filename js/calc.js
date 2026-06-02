@@ -519,3 +519,374 @@ export function loanPaidToDate(sbi) {
     remaining:     sbi.outstandingINR || 0,
   };
 }
+
+// ── India NRI Tax ────────────────────────────────────────────
+//
+// All functions below are pure (zero DOM dependencies). Slab rates and cess
+// treatment are per the legally reviewed spec v1.1 (CA Arjun Mehta, ICAI/ICAEW).
+// FY 2024-25 / AY 2025-26 baseline. Years are user-configurable in state.
+
+/**
+ * Calculates the Section 80E deduction and the resulting tax saving.
+ *
+ * Rules:
+ * - Only available under the old tax regime.
+ * - Deduction = full interest paid (no monetary cap per s.80E ITA 1961).
+ * - The deduction reduces total Indian taxable income.
+ * - Tax saving is estimated at the marginal rate applicable to the taxpayer's
+ *   Indian taxable income slab (NRI, old regime).
+ * - 8-year window: if deductionYearsUsed >= 8, deduction is zero.
+ *
+ * @param {object} indiaTax  - the fin_india_tax state object
+ * @returns {{ deductionINR: number, taxSavingINR: number, marginalRatePct: number }}
+ */
+export function calc80EDeduction(indiaTax) {
+  const sec80E = indiaTax.sec80E || {};
+
+  // Guard: new regime, not claiming, or window exhausted
+  if (
+    indiaTax.taxRegime !== 'old' ||
+    !sec80E.claimingDeduction ||
+    (sec80E.deductionYearsUsed || 0) >= 8
+  ) {
+    return { deductionINR: 0, taxSavingINR: 0, marginalRatePct: 0 };
+  }
+
+  const deductionINR = sec80E.annualInterestPaidINR || 0;
+
+  // Slab-taxable income for marginal rate estimation (before 80E).
+  // Rental income uses taxable amount after 30% standard deduction u/s 24(a).
+  // Dividend income excluded — it is taxed at flat rate u/s 115A, not slab rates.
+  const grossIndiaIncome =
+    (indiaTax.nroInterestIncomeINR || 0) +
+    ((indiaTax.rentalIncomeINR || 0) * 0.70) +
+    (indiaTax.otherIndiaIncomeINR || 0);
+
+  const marginalRatePct = indiaMarginalRate(grossIndiaIncome);
+
+  // Tax saving = deduction × marginal rate × (1 + cess rate). Cess is 4%.
+  const taxSavingINR = round2(deductionINR * (marginalRatePct / 100) * 1.04);
+
+  return { deductionINR, taxSavingINR, marginalRatePct };
+}
+
+/**
+ * Returns the marginal Income Tax rate (%) under India old regime for NRIs.
+ * Does not include cess.
+ * @param {number} totalIncomeINR
+ * @returns {number} rate as percentage, e.g. 20
+ */
+export function indiaMarginalRate(totalIncomeINR) {
+  if (totalIncomeINR <= 250000)  return 0;
+  if (totalIncomeINR <= 500000)  return 5;
+  if (totalIncomeINR <= 1000000) return 20;
+  return 30;
+}
+
+/**
+ * Calculates India income tax on dividend income from Indian companies / equity MFs.
+ *
+ * s.115A — NRI dividend income taxed at flat 20% + 4% cess, not at progressive slab rates.
+ * Dividend income is bifurcated from other income and taxed separately at this flat rate.
+ * The basic exemption limit does NOT apply to this component.
+ *
+ * Effective combined rate: 20% × 1.04 = 20.8%.
+ *
+ * @param {number} dividendIncomeINR  - gross dividend income from Indian equities/MFs
+ * @returns {number} tax in INR (inclusive of cess)
+ */
+export function calcDividendTax(dividendIncomeINR) {
+  // s.115A — NRI dividend income taxed at flat 20% + 4% cess, not at progressive slab rates.
+  return round2((dividendIncomeINR || 0) * 0.208); // 20% flat + 4% cess = 20.8%
+}
+
+/**
+ * Calculates the net India income tax liability for an NRI
+ * after applying TDS credit and DTAA foreign tax credit.
+ *
+ * Income bifurcation (BLOCKING FIX — CA review 2026-06-02):
+ *   - NRO interest + (rental × 0.70) + other income → progressive slab rates via calcIndiaIncomeTax()
+ *   - Dividend income → flat 20% + 4% cess via calcDividendTax() (s.115A)
+ *   - Rental income: 30% standard deduction u/s 24(a) applied before slab entry.
+ *     Taxable rental = rentalIncomeINR × 0.70.
+ *
+ * Surcharge note: surcharge is not implemented. If total taxable income exceeds
+ * ₹50,00,000, surcharge applies and this function will under-calculate tax.
+ *
+ * @param {object} indiaTax  - the fin_india_tax state object
+ * @returns {{
+ *   grossIndiaIncomeINR: number,
+ *   rentalStdDeductionINR: number,
+ *   taxableRentalIncomeINR: number,
+ *   sec80EDeductionINR: number,
+ *   slabTaxableIncomeINR: number,
+ *   slabTaxINR: number,
+ *   dividendTaxINR: number,
+ *   grossTaxINR: number,
+ *   cessINR: number,
+ *   totalTaxBeforeCreditINR: number,
+ *   totalTdsINR: number,
+ *   afterTdsINR: number,
+ *   dtaaReliefINR: number,
+ *   netPayableINR: number,
+ *   refundDueINR: number,
+ *   effectiveRatePct: number,
+ *   surchargeWarning: boolean
+ * }}
+ */
+export function calcNetIndiaTax(indiaTax) {
+  indiaTax = indiaTax || {};
+  const nroInterest    = indiaTax.nroInterestIncomeINR || 0;
+  const rentalGross    = indiaTax.rentalIncomeINR      || 0;
+  const dividendIncome = indiaTax.dividendIncomeINR    || 0;
+  const otherIncome    = indiaTax.otherIndiaIncomeINR  || 0;
+
+  // Apply 30% standard deduction u/s 24(a) on rental income before slab entry.
+  // Taxable rental income = gross rental × 0.70.
+  const rentalStdDeductionINR  = round2(rentalGross * 0.30);
+  const taxableRentalIncomeINR = round2(rentalGross * 0.70);
+
+  // Gross income for display (uses gross rental — deduction shown separately)
+  const grossIndiaIncomeINR = nroInterest + rentalGross + dividendIncome + otherIncome;
+
+  // Section 80E (old regime only) — applied against slab income only (not dividends)
+  const { deductionINR: sec80EDeductionINR } = calc80EDeduction(indiaTax);
+
+  // Slab-taxable income: NRO interest + taxable rental (after 30% deduction) + other - 80E
+  // Dividend income is bifurcated out and handled by calcDividendTax() below.
+  const slabTaxableIncomeINR = Math.max(
+    0,
+    nroInterest + taxableRentalIncomeINR + otherIncome - sec80EDeductionINR
+  );
+
+  // Surcharge guard: surcharge is not implemented; warn if income exceeds ₹50L.
+  const surchargeWarning = (slabTaxableIncomeINR + dividendIncome) > 5000000;
+  if (surchargeWarning) {
+    console.warn(
+      'calcNetIndiaTax: total taxable income exceeds ₹50L — surcharge not applied. Tax calculation is understated.'
+    );
+  }
+
+  // Slab tax on (NRO interest + taxable rental + other income) — before cess
+  const slabTaxBeforeCessINR = calcIndiaIncomeTax(slabTaxableIncomeINR, indiaTax.taxRegime || 'old');
+  const slabCessINR          = round2(slabTaxBeforeCessINR * 0.04);
+  const slabTaxINR           = round2(slabTaxBeforeCessINR + slabCessINR);
+
+  // s.115A — NRI dividend income taxed at flat 20% + 4% cess, not at progressive slab rates.
+  const dividendTaxINR = calcDividendTax(dividendIncome);
+
+  // Combined tax (slab component + dividend flat rate component)
+  const totalTaxBeforeCreditINR = round2(slabTaxINR + dividendTaxINR);
+
+  // For backward-compatible return shape, expose grossTaxINR (pre-cess total) and cessINR separately.
+  const grossTaxINR = round2(slabTaxBeforeCessINR + (dividendIncome * 0.20));
+  const cessINR     = round2(totalTaxBeforeCreditINR - grossTaxINR);
+
+  // Total TDS already deducted
+  const totalTdsINR =
+    (indiaTax.tdsOnNroInterestINR || 0) +
+    (indiaTax.tdsOnRentalINR      || 0) +
+    (indiaTax.tdsOnDividendINR    || 0) +
+    (indiaTax.tdsOtherINR         || 0);
+
+  // After TDS credit
+  const afterTdsINR = round2(totalTaxBeforeCreditINR - totalTdsINR);
+
+  // DTAA foreign tax credit (only if Form 67 filed and relief claimed)
+  const dtaaReliefINR = (indiaTax.dtaa?.dtaaReliefClaimed && indiaTax.dtaa?.form67Filed)
+    ? (indiaTax.dtaa?.dtaaReliefClaimedINR || 0)
+    : 0;
+
+  // Net payable (floor at 0; negative means refund)
+  const rawNet = round2(afterTdsINR - dtaaReliefINR);
+  const netPayableINR = Math.max(0, rawNet);
+  const refundDueINR  = rawNet < 0 ? Math.abs(rawNet) : 0;
+
+  // Effective rate on gross income
+  const effectiveRatePct = grossIndiaIncomeINR > 0
+    ? round2((totalTaxBeforeCreditINR / grossIndiaIncomeINR) * 100)
+    : 0;
+
+  // Section 80TTA and 80TTB are not applicable to NRIs on NRO interest income and are intentionally excluded.
+
+  return {
+    grossIndiaIncomeINR,
+    rentalStdDeductionINR,
+    taxableRentalIncomeINR,
+    sec80EDeductionINR,
+    slabTaxableIncomeINR,
+    slabTaxINR,
+    dividendTaxINR,
+    grossTaxINR,
+    cessINR,
+    totalTaxBeforeCreditINR,
+    totalTdsINR,
+    afterTdsINR,
+    dtaaReliefINR,
+    netPayableINR,
+    refundDueINR,
+    effectiveRatePct,
+    surchargeWarning,
+  };
+}
+
+/**
+ * Computes India income tax on a given slab-taxable income under the specified regime.
+ * NRI slab rates — FY 2024-25 (AY 2025-26). Does NOT include cess.
+ *
+ * IMPORTANT: Do NOT pass dividend income to this function.
+ * Dividend income from Indian companies/MFs is taxed at a flat 20% u/s 115A (not slab rates)
+ * and must be processed via calcDividendTax() separately. See calcNetIndiaTax() for the
+ * correct bifurcation logic.
+ *
+ * Old regime slabs:
+ *   0 – 2,50,000: 0%
+ *   2,50,001 – 5,00,000: 5%
+ *   5,00,001 – 10,00,000: 20%
+ *   Above 10,00,000: 30%
+ *
+ * New regime slabs (NRI, FY 2024-25 post-Budget):
+ *   0 – 3,00,000: 0%
+ *   3,00,001 – 7,00,000: 5%
+ *   7,00,001 – 10,00,000: 10%
+ *   10,00,001 – 12,00,000: 15%
+ *   12,00,001 – 15,00,000: 20%
+ *   Above 15,00,000: 30%
+ * Note: Rebate u/s 87A is NOT available to NRIs.
+ *
+ * @param {number} taxableIncomeINR
+ * @param {'old'|'new'} regime
+ * @returns {number} tax in INR (before cess)
+ */
+export function calcIndiaIncomeTax(taxableIncomeINR, regime) {
+  if (regime === 'new') {
+    return calcSlabTax(taxableIncomeINR, [
+      { upTo: 300000,   rate: 0    },
+      { upTo: 700000,   rate: 0.05 },
+      { upTo: 1000000,  rate: 0.10 },
+      { upTo: 1200000,  rate: 0.15 },
+      { upTo: 1500000,  rate: 0.20 },
+      { upTo: Infinity, rate: 0.30 },
+    ]);
+  }
+  // Old regime (default)
+  return calcSlabTax(taxableIncomeINR, [
+    { upTo: 250000,   rate: 0    },
+    { upTo: 500000,   rate: 0.05 },
+    { upTo: 1000000,  rate: 0.20 },
+    { upTo: Infinity, rate: 0.30 },
+  ]);
+}
+
+/**
+ * Generic slab tax calculator.
+ * @param {number} income
+ * @param {{ upTo: number, rate: number }[]} slabs - ordered ascending by upTo
+ * @returns {number} tax
+ */
+export function calcSlabTax(income, slabs) {
+  let tax = 0;
+  let prev = 0;
+  for (const slab of slabs) {
+    if (income <= prev) break;
+    const taxable = Math.min(income, slab.upTo) - prev;
+    tax += taxable * slab.rate;
+    prev = slab.upTo;
+  }
+  return round2(tax);
+}
+
+/**
+ * Calculates the total tax paid on Indian-sourced income across both jurisdictions.
+ *
+ * Formula:
+ *   indiaTaxGBP         = netPayableINR / inrGbpRate
+ *   totalCrossBorderGBP = ukTaxOnIndiaIncomeGBP + indiaTaxGBP
+ *
+ * This represents the combined tax cost of earning Indian income, in GBP.
+ * The DTAA is designed to prevent double taxation; this figure shows the actual
+ * combined burden after all reliefs.
+ *
+ * @param {object} indiaTax    - fin_india_tax state
+ * @param {number} inrGbpRate  - from fin_settings.inrGbpRate
+ * @returns {{
+ *   netIndiaTaxGBP: number,
+ *   ukTaxOnIndiaIncomeGBP: number,
+ *   totalCrossBorderGBP: number,
+ *   crossBorderEffectiveRatePct: number
+ * }}
+ */
+export function calcCrossBorderPosition(indiaTax, inrGbpRate) {
+  const rate = (inrGbpRate && inrGbpRate > 0) ? inrGbpRate : 83;
+  const { netPayableINR, grossIndiaIncomeINR } = calcNetIndiaTax(indiaTax);
+
+  const netIndiaTaxGBP = round2(netPayableINR / rate);
+  const ukTaxOnIndiaIncomeGBP = indiaTax.dtaa?.ukTaxPaidOnIndiaIncomeGBP || 0;
+  const totalCrossBorderGBP = round2(netIndiaTaxGBP + ukTaxOnIndiaIncomeGBP);
+
+  const grossIndiaIncomeGBP = round2(grossIndiaIncomeINR / rate);
+  const crossBorderEffectiveRatePct = grossIndiaIncomeGBP > 0
+    ? round2((totalCrossBorderGBP / grossIndiaIncomeGBP) * 100)
+    : 0;
+
+  return {
+    netIndiaTaxGBP,
+    ukTaxOnIndiaIncomeGBP,
+    totalCrossBorderGBP,
+    crossBorderEffectiveRatePct,
+  };
+}
+
+/**
+ * Returns the ITR filing deadline and alert state for the current AY.
+ *
+ * Rules (India Income Tax Act):
+ * - Normal (non-audit) deadline: 31 July of the AY (e.g. AY 2025-26 → 31 July 2025)
+ * - Audit case deadline: 31 October of the AY
+ * - "AY YYYY-YY" format: the first YYYY is the AY calendar year.
+ *
+ * Alert states:
+ *   'filed'        — ITR already filed (green)
+ *   'not_required' — not required (grey)
+ *   'ok'           — not filed, deadline > 30 days away (neutral)
+ *   'warning'      — not filed, 1–30 days to deadline (amber)
+ *   'overdue'      — not filed, deadline passed (red)
+ *
+ * @param {object} itr    - indiaTax.itr
+ * @param {string} today  - ISO date string YYYY-MM-DD
+ * @returns {{
+ *   deadline: Date,
+ *   deadlineISO: string,
+ *   daysToDeadline: number,
+ *   alertState: 'filed'|'not_required'|'ok'|'warning'|'overdue',
+ *   deadlineLabel: string
+ * }}
+ */
+export function calcITRDeadline(itr, today) {
+  itr = itr || {};
+  if (itr.filingStatus === 'filed') {
+    return { deadline: null, deadlineISO: '', daysToDeadline: 0, alertState: 'filed', deadlineLabel: 'Filed' };
+  }
+  if (itr.filingStatus === 'not_required') {
+    return { deadline: null, deadlineISO: '', daysToDeadline: 0, alertState: 'not_required', deadlineLabel: 'Not required' };
+  }
+
+  // Parse AY year from assessmentYear string e.g. 'AY 2025-26' → 2025
+  const ayMatch = (itr.assessmentYear || '').match(/AY\s+(\d{4})/);
+  const ayYear = ayMatch ? parseInt(ayMatch[1], 10) : new Date().getFullYear();
+
+  const deadlineMonth = itr.isAuditCase ? 9 : 6; // October = 9, July = 6 (0-indexed)
+  const deadline = new Date(ayYear, deadlineMonth, 31);
+  const deadlineISO = deadline.toISOString().slice(0, 10);
+  const todayDate = new Date(today);
+  const daysToDeadline = Math.round((deadline - todayDate) / 86400000);
+
+  let alertState;
+  if (daysToDeadline < 0)  alertState = 'overdue';
+  else if (daysToDeadline <= 30) alertState = 'warning';
+  else alertState = 'ok';
+
+  const deadlineLabel = deadline.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  return { deadline, deadlineISO, daysToDeadline, alertState, deadlineLabel };
+}

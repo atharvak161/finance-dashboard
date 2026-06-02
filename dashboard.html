@@ -17,7 +17,7 @@
     <header class="topbar" id="topbar"></header>
     <div class="content page-content" id="content">
 
-      <div class="section-header">
+      <div class="section-header" data-section="profile">
         <div>
           <div class="section-title">Overview</div>
           <div class="section-subtitle">Your financial snapshot</div>
@@ -29,7 +29,7 @@
       <div id="emergency-runway-kpi" style="margin-top:12px"></div>
 
       <div class="grid-2 mt-20">
-        <div class="panel">
+        <div class="panel" data-section="expenses">
           <div class="panel-header"><span class="panel-title">Expense Breakdown</span></div>
           <div class="chart-wrap chart-h-260"><canvas id="chart-expense-doughnut"></canvas></div>
           <div class="chart-legend" id="legend-expense-doughnut"></div>
@@ -54,7 +54,7 @@
           <div class="gauge-value" id="gauge-val-emergency">0%</div>
           <div class="gauge-label" id="gauge-lbl-emergency">of £3,000</div>
         </div>
-        <div class="panel gauge-wrap" id="gauge-india">
+        <div class="panel gauge-wrap" id="gauge-india" data-section="goals">
           <div class="panel-title" style="margin-bottom:8px">India Trip</div>
           <div class="gauge-chart-container"><canvas id="chart-gauge-india"></canvas></div>
           <div class="gauge-value" id="gauge-val-india">0%</div>

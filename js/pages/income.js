@@ -1,4 +1,4 @@
-import { initPage }    from '../page-init.js';
+import { initPage, saveSec } from '../page-init.js';
 import { save }        from '../store.js';
 import {
   calculateNetPay, applyScheduledChanges, totalExpenses,
@@ -40,7 +40,7 @@ function render(st) {
     <div class="stat-row"><span class="stat-label">Hourly rate</span><span class="stat-value mono">${fmtGBP(pay.hourlyRate,2)}/hr</span></div>
     <div class="deduction-row"><span class="ded-label">Gross (base)</span><span class="ded-plus">${fmtGBP(pay.grossBase)}</span></div>
     <div class="deduction-row"><span class="ded-label">Overtime</span><span class="ded-plus">+${fmtGBP(inc.avgOvertimeGrossGBP||0)}</span></div>
-    <div class="deduction-row"><span class="ded-label">Income Tax (20%)</span><span class="ded-minus">−${fmtGBP(pay.incomeTax)}</span></div>
+    <div class="deduction-row"><span class="ded-label">Income Tax (${pay.grossWithOT > 0 ? (pay.incomeTax / pay.grossWithOT * 100).toFixed(1) + '%' : '—'})</span><span class="ded-minus">−${fmtGBP(pay.incomeTax)}</span></div>
     <div class="deduction-row"><span class="ded-label">National Insurance (8%)</span><span class="ded-minus">−${fmtGBP(pay.ni)}</span></div>
     <div class="deduction-row"><span class="ded-label">Pension (${inc.pensionEmployeeRate||0}%)</span><span class="ded-minus">−${fmtGBP(pay.pension)}</span></div>
     <div class="deduction-row"><span class="ded-label">Tax underpayment (1034L)</span><span class="ded-minus">−${fmtGBP(pay.extraTax)}</span></div>
@@ -82,7 +82,7 @@ function bindFields(st) {
     });
     el.addEventListener('change', async () => {
       st.income[el.dataset.key] = el.type === 'number' ? (parseFloat(el.value)||0) : el.value;
-      await save('fin_income', st.income);
+      await saveSec('fin_income', st.income);
       render(st);
     });
   });

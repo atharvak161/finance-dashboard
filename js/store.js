@@ -6,7 +6,7 @@ export { DEFAULTS };
 const KEYS = [
   'fin_profile','fin_income','fin_expenses','fin_debts',
   'fin_investments','fin_goals','fin_monthly_log',
-  'fin_settings','fin_tax_tracker','fin_india_log'
+  'fin_settings','fin_tax_tracker','fin_india_log','fin_india_tax'
 ];
 
 // Multi-word keys are stored snake_case in localStorage but consumed
@@ -15,11 +15,13 @@ const camelMap = {
   'monthly_log': 'monthlyLog',
   'tax_tracker': 'taxTracker',
   'india_log':   'indiaLog',
+  'india_tax':   'indiaTax',
 };
 const reverseMap = {
   'monthlyLog': 'fin_monthly_log',
   'taxTracker': 'fin_tax_tracker',
   'indiaLog':   'fin_india_log',
+  'indiaTax':   'fin_india_tax',
 };
 
 export async function loadAll() {
