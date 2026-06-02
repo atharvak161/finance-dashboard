@@ -21,8 +21,6 @@ document.querySelectorAll('#settings-tabs .tab-btn').forEach(btn => {
   });
 });
 
-renderTab('profile');
-
 // ── Explicit-save state ───────────────────────────────────────
 //
 // Replaces the old auto-save-on-keypress approach. Typing now only mutates the
@@ -51,6 +49,14 @@ function registerSave(key, obj) {
     list.find(e => e.key === key).obj = obj;
   }
 }
+
+// Initial render. This MUST run after `_pendingState` and `_currentStoreKey`
+// are declared above: renderTab → renderProfile → registerSave reads both. The
+// old code called renderTab('profile') near the top of the module, before those
+// `const`/`let` bindings were initialised, so registerSave hit the temporal dead
+// zone and threw before content.innerHTML was set — leaving the tab blank with
+// no input fields. Keeping the call here fixes that regression.
+renderTab('profile');
 
 // Save handler shared by every tab's Save button.
 async function saveCurrentTab(btn) {
