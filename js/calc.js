@@ -886,7 +886,8 @@ export function calcITRDeadline(itr, today) {
 
   const deadlineMonth = itr.isAuditCase ? 9 : 6; // October = 9, July = 6 (0-indexed)
   const deadline = new Date(ayYear, deadlineMonth, 31);
-  const deadlineISO = deadline.toISOString().slice(0, 10);
+  // Build ISO string from local date components to avoid UTC-offset day shift
+  const deadlineISO = `${deadline.getFullYear()}-${String(deadline.getMonth()+1).padStart(2,'0')}-${String(deadline.getDate()).padStart(2,'0')}`;
   const todayDate = new Date(today);
   const daysToDeadline = Math.round((deadline - todayDate) / 86400000);
 

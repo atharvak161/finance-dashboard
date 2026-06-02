@@ -278,7 +278,7 @@ function renderIndia80E(st, it) {
 // ── 2.7 DTAA ─────────────────────────────────────────────────
 function renderIndiaDtaa(st, it) {
   const d = it.dtaa;
-  const rate = st.settings?.inrGbpRate || st.profile?.inrGbpRate || 83;
+  const rate = st.settings?.inrGbpRate || st.profile?.inrGbpRate || 0; // safeRate() in calc layer handles zero
   const claiming = !!d.dtaaReliefClaimed;
   const net = calcNetIndiaTax(it);
   const cb = calcCrossBorderPosition(it, rate);
