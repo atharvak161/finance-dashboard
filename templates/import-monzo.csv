@@ -1,0 +1,3 @@
+Transaction ID,Date,Time,Type,Name,Emoji,Category,Amount,Currency,Local amount,Local currency,Notes and #tags,Address,Receipt,Description,Category split,Money Out,Money In
+example_01,01/06/2026,09:00:00,FASTER_PAYMENT,Example Salary,💰,Salary,2003.00,GBP,2003.00,GBP,Monthly salary,,,Salary,,0.00,2003.00
+example_02,01/06/2026,12:00:00,CARD_PAYMENT,Example Tesco,🛒,Groceries,-45.50,GBP,45.50,GBP,Weekly groceries,,,Groceries,,45.50,0.00

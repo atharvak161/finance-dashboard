@@ -1,0 +1,3 @@
+Date started (UTC),Time started (UTC),Date completed (UTC),Time completed (UTC),Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance
+2026-06-01,09:00:00,2026-06-01,09:00:01,TRANSFER,Current,2026-06-01,2026-06-01,Example Salary,2003.00,0.00,GBP,COMPLETED,2003.00
+2026-06-01,10:00:00,2026-06-01,10:00:01,CARD_PAYMENT,Current,2026-06-01,2026-06-01,Example Tesco,-45.50,0.00,GBP,COMPLETED,1957.50
