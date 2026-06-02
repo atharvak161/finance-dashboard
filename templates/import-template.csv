@@ -1,0 +1,6 @@
+Date,Description,Amount (GBP),Category,Type,Notes
+2026-06-01,Example - Salary Payment,2003.00,Income,income,Monthly net salary
+2026-06-01,Example - Rent,-700.00,Housing,expense,Monthly rent
+2026-06-01,Example - Groceries,-45.50,Food,expense,Weekly shop
+2026-06-01,Example - TFL,-95.00,Transport,expense,Monthly travelcard
+2026-06-01,Example - Savings Transfer,-200.00,Savings,transfer,Emergency fund contribution
