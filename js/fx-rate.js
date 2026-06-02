@@ -34,16 +34,9 @@ async function tryExchangeRateHost() {
 }
 
 export async function fetchLiveRate() {
-  // Return cached rate if still fresh
-  try {
-    const cached = localStorage.getItem(FX_CACHE_KEY);
-    if (cached) {
-      const { rate, timestamp, date } = JSON.parse(cached);
-      if (Date.now() - timestamp < FX_CACHE_TTL) {
-        return { rate, source: 'cache', date };
-      }
-    }
-  } catch {}
+  // Always fetch live — no cache returned to the caller.
+  // Cache is still written after a successful fetch so the fallback
+  // is available if the network is temporarily unavailable on the next call.
 
   // Try primary then fallback
   let result = null;
