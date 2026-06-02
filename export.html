@@ -57,6 +57,59 @@
         </div>
       </div>
 
+      <div class="section-header" style="margin-top:24px">
+        <div>
+          <div class="section-title">Import CSV Bank Statement</div>
+          <div class="section-subtitle">Parsed entirely in your browser — the file never leaves this device.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Import transactions</span></div>
+        <p style="font-size:13.5px;color:var(--text-secondary);margin-bottom:16px">
+          Upload a bank statement CSV. Revolut, Monzo and the generic template are auto-detected.
+          New transactions are added to your monthly log; duplicates are skipped automatically.
+        </p>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input type="file" id="csv-import-file" accept=".csv">
+        </div>
+
+        <div id="csv-detect-msg" class="alert alert-info mt-16" style="display:none"></div>
+
+        <div id="csv-preview-wrap" style="display:none" class="mt-16">
+          <p class="label-muted" style="margin-bottom:8px">Preview — first 5 rows</p>
+          <div class="table-wrap">
+            <table class="data-table" id="csv-preview-table"></table>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
+            <button class="btn btn-secondary" id="csv-review-btn">Review &amp; Import</button>
+          </div>
+        </div>
+
+        <div id="csv-review-wrap" style="display:none" class="mt-16">
+          <div id="csv-review-summary" class="alert alert-warning"></div>
+          <p class="label-muted" style="margin-bottom:8px">New transactions to import</p>
+          <div class="table-wrap" style="max-height:360px;overflow-y:auto">
+            <table class="data-table" id="csv-review-table"></table>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
+            <button class="btn btn-primary" id="csv-confirm-btn">Confirm Import</button>
+            <button class="btn btn-ghost" id="csv-cancel-btn">Cancel</button>
+          </div>
+        </div>
+
+        <div id="csv-result-msg" class="alert alert-success mt-16" style="display:none"></div>
+
+        <hr class="divider mt-16">
+        <p class="label-muted" style="margin-bottom:10px">Download a template to format your data:</p>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13.5px">
+          <a href="templates/import-template.csv" download>Generic template</a>
+          <a href="templates/import-revolut.csv" download>Revolut format</a>
+          <a href="templates/import-monzo.csv" download>Monzo format</a>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
