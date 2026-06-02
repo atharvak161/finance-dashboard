@@ -114,4 +114,49 @@ export function renderSharedLayout(activeNav, state) {
       if (window._exportCurrentPagePDF) window._exportCurrentPagePDF();
     });
   }
+
+  // ── Mobile navigation ─────────────────────────────────────
+  initMobileNav();
+}
+
+// Mobile navigation
+function initMobileNav() {
+  // Avoid creating duplicate controls if layout re-renders
+  if (document.querySelector('.mobile-nav-toggle')) return;
+
+  // Create toggle button
+  const toggle = document.createElement('button');
+  toggle.className = 'mobile-nav-toggle';
+  toggle.setAttribute('aria-label', 'Toggle navigation');
+  toggle.innerHTML = '<span></span><span></span><span></span>';
+  document.body.appendChild(toggle);
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'mobile-overlay';
+  document.body.appendChild(overlay);
+
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+
+  function openNav() {
+    sidebar.classList.add('mobile-open');
+    overlay.classList.add('mobile-open');
+    toggle.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeNav() {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('mobile-open');
+    toggle.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  toggle.addEventListener('click', () => {
+    sidebar.classList.contains('mobile-open') ? closeNav() : openNav();
+  });
+  overlay.addEventListener('click', closeNav);
+
+  // Close on nav link click
+  sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', closeNav));
 }

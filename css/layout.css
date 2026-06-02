@@ -198,3 +198,67 @@
   .topbar{padding:10px 16px}
   .chart-h-300{height:240px}.chart-h-360{height:260px}
 }
+
+/* ── Mobile navigation ───────────────────── */
+.mobile-nav-toggle {
+  display: none;
+  position: fixed;
+  top: 16px; right: 16px;
+  z-index: 1000;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  width: 40px; height: 40px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px;
+}
+.mobile-nav-toggle span {
+  display: block;
+  width: 20px; height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: all 0.25s;
+}
+.mobile-nav-toggle.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+.mobile-nav-toggle.open span:nth-child(2) { opacity: 0; }
+.mobile-nav-toggle.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+.mobile-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 199;
+}
+
+@media (max-width: 767px) {
+  .mobile-nav-toggle { display: flex; }
+
+  .sidebar {
+    display: flex !important;
+    position: fixed !important;
+    top: 0; left: -280px;
+    height: 100vh;
+    z-index: 200;
+    transition: left 0.25s ease;
+    overflow-y: auto;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+  }
+
+  .sidebar.mobile-open { left: 0; }
+  .mobile-overlay.mobile-open { display: block; }
+
+  .main-content { margin-left: 0 !important; }
+
+  /* Fix touch targets */
+  .nav-link, .nav-item { min-height: 44px; display: flex; align-items: center; }
+
+  /* Fix iOS zoom on inputs */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* Fix page content padding on mobile */
+  .page-content, .content-area, main { padding: 16px !important; }
+}
