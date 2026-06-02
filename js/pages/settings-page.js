@@ -31,8 +31,14 @@ document.querySelectorAll('#settings-tabs .tab-btn').forEach(btn => {
 // tab's Save button must persist. A tab may persist more than one store key
 // (e.g. Profile writes fin_profile + fin_settings + fin_goals).
 
+// ── All module-level constants must be declared BEFORE renderTab() is called ──
+// renderTab → render* → registerSave/saveButtonHtml all read these.
+// Any const/let declared after the renderTab() call is in the TDZ when
+// those functions run, causing a silent ReferenceError and blank content.
+
 const _pendingState = {}; // storeKey → [{ key, obj }, ...]
 let _currentStoreKey = null;
+const _saveBtnId = 'settings-save-btn'; // also needed by saveButtonHtml()
 
 // Register a save target for the currently-rendering tab. Called by each
 // render function. The first registered key becomes the tab's primary storeKey.
@@ -45,17 +51,11 @@ function registerSave(key, obj) {
   if (!list.some(e => e.key === key)) {
     list.push({ key, obj });
   } else {
-    // keep the object reference fresh (some renderers rebuild nested objects)
     list.find(e => e.key === key).obj = obj;
   }
 }
 
-// Initial render. This MUST run after `_pendingState` and `_currentStoreKey`
-// are declared above: renderTab → renderProfile → registerSave reads both. The
-// old code called renderTab('profile') near the top of the module, before those
-// `const`/`let` bindings were initialised, so registerSave hit the temporal dead
-// zone and threw before content.innerHTML was set — leaving the tab blank with
-// no input fields. Keeping the call here fixes that regression.
+// Initial render — runs after all declarations above are initialised.
 renderTab('profile');
 
 // Save handler shared by every tab's Save button.
@@ -89,7 +89,7 @@ async function saveCurrentTab(btn) {
 
 // Builds the Save-button HTML appended to the bottom of each tab. The onclick
 // wiring is attached afterwards by _attachSaveButton().
-const _saveBtnId = 'settings-save-btn';
+// NOTE: _saveBtnId is declared near the top of the module (before renderTab).
 function saveButtonHtml() {
   return `<div style="margin-top:20px;display:flex;justify-content:flex-end">
     <button id="${_saveBtnId}" class="btn btn-primary" type="button">Save</button>
