@@ -348,7 +348,16 @@ export function projectNetWorthTimeline(params) {
     date.setMonth(date.getMonth() + m);
     const label = date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
 
-    // Career transition boosts monthly saving
+    // Career transition boosts monthly saving.
+    // LIMITATION (audit A4e): the 0.4 factor is an approximation — it assumes the employee
+    // retains 40% of the gross salary increase as extra monthly saving. This is NOT derived
+    // from the actual tax/NI treatment of the new salary. For a basic-rate taxpayer the true
+    // net retention is closer to 0.67 (after 20% IT + ~8% NI); for a higher-rate taxpayer
+    // it is closer to 0.48. The correct approach is to call calculateNetPay() with newSalaryGBP
+    // and compare the resulting netBase to the current netBase — see surplusTrajectoryEvents()
+    // which already does this correctly.
+    // TODO: replace this block with a calculateNetPay()-based delta once income inputs are
+    // reliably available in the projectNetWorthTimeline call-site.
     if (careerTransitionDate) {
       const trans = new Date(careerTransitionDate);
       if (date >= trans && newSalaryGBP && currentSalaryGBP) {
