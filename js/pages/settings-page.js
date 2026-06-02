@@ -21,9 +21,21 @@ renderTab('profile');
 
 // ── Auto-save helper ──────────────────────────────────────────
 
+let _renderTimer = null;
+
 async function autoSave(storeKey, obj) {
-  await saveSec(storeKey, obj); // saves and re-runs highlighting
-  renderTab(_currentTab); // re-render only current tab
+  await saveSec(storeKey, obj); // saves to localStorage + re-runs highlighting
+
+  // Do NOT re-render immediately — that destroys the focused input on every
+  // keystroke, making it impossible to type more than one character.
+  // Instead, debounce: re-render 800ms after the user stops typing,
+  // but only if they have left the input field.
+  clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(() => {
+    const active = document.activeElement;
+    const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+    if (!isTyping) renderTab(_currentTab);
+  }, 800);
 }
 
 // ── Field helpers ─────────────────────────────────────────────
