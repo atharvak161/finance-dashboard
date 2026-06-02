@@ -162,7 +162,22 @@ export function calculateNetWorth(investments, debts, inrGbpRate) {
   const cashTotal    = cashAccounts.reduce((s, a) => s + (a.balanceGBP || 0), 0);
   const pensionTotal = pensions.reduce((s, p) => s + (p.valueGBP || 0), 0);
   const ulipTotal    = ulips.reduce((s, u) => s + ulipValueGBP(u, inrGbpRate), 0);
-  const totalAssets  = round2(cashTotal + pensionTotal + ulipTotal);
+
+  // ── UK Wrappers (ISA + SIPP) ─────────────────────────────────
+  const isaTotal = (investments.isa?.stocksAndSharesISA?.currentValueGBP || 0)
+                 + (investments.isa?.cashISA?.currentValueGBP || 0)
+                 + (investments.isa?.lifetimeISA?.currentValueGBP || 0);
+  const sippTotal = investments.sipp?.currentValueGBP || 0;
+
+  // ── India (converted to GBP at the safe rate) ────────────────
+  const rate = safeRate(inrGbpRate);
+  const npsTotal  = ((investments.nps?.tier1ValueINR || 0) + (investments.nps?.tier2ValueINR || 0)) / rate;
+  const elssTotal = (investments.elss || []).reduce((s, e) => s + (e.currentValueINR || 0), 0) / rate;
+  const ppfTotal  = (investments.ppf?.currentValueINR || 0) / rate;
+  const sgbTotal  = (investments.sgbs || []).reduce((s, x) => s + (x.gramsHeld || 0) * (x.purchasePriceINR || 0), 0) / rate;
+
+  const totalAssets  = round2(cashTotal + pensionTotal + ulipTotal
+                     + isaTotal + sippTotal + npsTotal + elssTotal + ppfTotal + sgbTotal);
 
   const sbiGBP       = round2((debts.sbi?.outstandingINR || 0) / safeRate(inrGbpRate));
   const totalDebts   = sbiGBP;

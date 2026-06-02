@@ -196,6 +196,50 @@ textarea.form-input { font-family:var(--font-body); resize:vertical; min-height:
 .badge-neutral  { background:rgba(0,191,255,0.06);  color:var(--text-secondary); }
 .badge-paid     { background:rgba(0,230,118,0.12);  color:var(--color-positive); }
 .badge-pending  { background:rgba(255,145,0,0.12);  color:var(--color-warning); }
+.badge-danger {
+  background: rgba(255, 23, 68, 0.13);
+  color: #ff1744;
+  border: 1px solid #ff1744;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* ── LISA / ISA purpose toggle ───────────────────────────── */
+.purpose-toggle {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.purpose-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-medium);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.purpose-btn.active {
+  background: rgba(0,230,118,0.12);
+  border-color: #00e676;
+  color: #00e676;
+}
+
+/* ── Two-segment equity/bond bar ─────────────────────────── */
+.split-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+.split-bar-equity { background: #00bfff; }
+.split-bar-bond   { background: #d500f9; }
 
 /* ── Progress bar ────────────────────────────────────────── */
 .progress-wrap { display:flex; flex-direction:column; gap:4px; }
@@ -431,6 +475,7 @@ textarea.form-input { font-family:var(--font-body); resize:vertical; min-height:
 }
 .needs-data .section-title,
 .needs-data .card-title,
+.needs-data .panel-title,
 .needs-data h3,
 .needs-data h4 {
   display: flex;
@@ -439,6 +484,7 @@ textarea.form-input { font-family:var(--font-body); resize:vertical; min-height:
 }
 .needs-data .section-title::after,
 .needs-data .card-title::after,
+.needs-data .panel-title::after,
 .needs-data h3::after,
 .needs-data h4::after {
   content: '● enter data';

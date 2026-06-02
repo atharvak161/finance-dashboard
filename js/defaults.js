@@ -119,6 +119,52 @@ export const DEFAULTS = {
         aggressiveRatePercent: 16,
       },
     ],
+    isa: {
+      stocksAndSharesISA: {
+        provider: '',
+        currentValueGBP: 0,
+        annualContributionGBP: 0,
+        yearToDateContributionGBP: 0,
+      },
+      cashISA: {
+        provider: '',
+        currentValueGBP: 0,
+        annualContributionGBP: 0,
+        yearToDateContributionGBP: 0,
+      },
+      lifetimeISA: {
+        provider: '',
+        currentValueGBP: 0,
+        annualContributionGBP: 0,
+        yearToDateContributionGBP: 0,
+        bonusReceivedGBP: 0,
+        firstHomePurpose: false,
+      },
+    },
+    sipp: {
+      provider: '',
+      currentValueGBP: 0,
+      annualContributionGBP: 0,
+      yearToDateContributionGBP: 0,
+      employerContributionGBP: 0,
+    },
+    nps: {
+      tier1ValueINR: 0,
+      tier1MonthlyINR: 0,
+      tier2ValueINR: 0,
+      equityAllocationPercent: 75,
+    },
+    elss: [
+      { fund: '', currentValueINR: 0, monthlyINR: 0, lockInDate: '' },
+    ],
+    ppf: {
+      currentValueINR: 0,
+      annualContributionINR: 0,
+      maturityYear: 0,
+    },
+    sgbs: [
+      { series: '', gramsHeld: 0, purchasePriceINR: 0, interestRatePercent: 2.5, maturityDate: '' },
+    ],
   },
 
   fin_goals: {
