@@ -331,13 +331,18 @@ function renderGoals(content) {
 }
 
 function renderProjections(content) {
-  const nwp = state.settings?.nwProjection || {};
+  // Ensure a live nwProjection object exists and mutate IT directly. The old
+  // code spread a stale {...nwp} snapshot per field, which (without a re-render
+  // between keystrokes) would lose earlier edits when editing multiple fields
+  // before Save. Mutating the live object avoids that.
+  if (!state.settings.nwProjection) state.settings.nwProjection = {};
+  const nwp = state.settings.nwProjection;
   registerSave('fin_settings', state.settings);
   content.innerHTML = `<div class="panel"><div class="panel-title" style="margin-bottom:20px">Net Worth Projections</div>
     <div class="grid-2">
-      ${field('Pension growth rate (%/yr)',        'number', nwp.pensionGrowthRate,        v=>{state.settings.nwProjection={...nwp,pensionGrowthRate:v};})}
-      ${field('Career transition date',            'date',   nwp.careerTransitionDate,     v=>{state.settings.nwProjection={...nwp,careerTransitionDate:v};})}
-      ${field('New salary after transition (£/yr)','number', nwp.newSalaryGBP,            v=>{state.settings.nwProjection={...nwp,newSalaryGBP:v};})}
+      ${field('Pension growth rate (%/yr)',        'number', nwp.pensionGrowthRate,        v=>{nwp.pensionGrowthRate=v;})}
+      ${field('Career transition date',            'date',   nwp.careerTransitionDate,     v=>{nwp.careerTransitionDate=v;})}
+      ${field('New salary after transition (£/yr)','number', nwp.newSalaryGBP,            v=>{nwp.newSalaryGBP=v;})}
     </div>
     ${saveButtonHtml()}
   </div>`;
