@@ -817,7 +817,7 @@ export function calcSlabTax(income, slabs) {
  * }}
  */
 export function calcCrossBorderPosition(indiaTax, inrGbpRate) {
-  const rate = (inrGbpRate && inrGbpRate > 0) ? inrGbpRate : 83;
+  const rate = safeRate(inrGbpRate);
   const { netPayableINR, grossIndiaIncomeINR } = calcNetIndiaTax(indiaTax);
 
   const netIndiaTaxGBP = round2(netPayableINR / rate);
