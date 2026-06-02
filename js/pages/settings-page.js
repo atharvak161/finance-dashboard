@@ -135,35 +135,39 @@ function field(label, type, value, onChange, hint='') {
 // ── Live FX rate helper ───────────────────────────────────────
 
 function _attachFxButton(btnId, inputId, statusId) {
-  setTimeout(() => {
+  setTimeout(async () => {
     const btn    = document.getElementById(btnId);
     const status = document.getElementById(statusId);
     const input  = document.getElementById(inputId);
     if (!btn || !status || !input) return;
 
+    // Click handler (kept for manual re-fetch)
     btn.addEventListener('click', async () => {
+      await doFetch();
+    });
+
+    // Auto-fetch on load
+    async function doFetch() {
       btn.disabled = true;
       btn.textContent = 'Fetching…';
       status.textContent = '';
-
       const result = await fetchLiveRate();
-
       btn.disabled = false;
       btn.textContent = 'Fetch live rate';
-
       if (result.source === 'error' || result.rate === null) {
         status.textContent = 'Could not fetch live rate. Enter manually.';
         status.style.color = 'var(--color-negative)';
       } else {
         input.value = result.rate;
-        // Trigger the input event so the onChange handler updates the state object
         input.dispatchEvent(new Event('input', { bubbles: true }));
-        const label = result.source === 'cache' ? 'Cached rate' : 'Live rate';
         const dateStr = result.date ? ` as of ${result.date}` : '';
-        status.textContent = `${label}: ${result.rate}${dateStr} — click Save to apply`;
+        status.textContent = `Live rate: ${result.rate}${dateStr} — click Save to apply`;
         status.style.color = 'var(--color-positive, #4caf50)';
       }
-    });
+    }
+
+    // Auto-fetch immediately on page load
+    await doFetch();
   }, 0);
 }
 
