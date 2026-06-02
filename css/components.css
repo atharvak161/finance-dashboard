@@ -308,14 +308,15 @@ textarea.form-input { font-family:var(--font-body); resize:vertical; min-height:
 
 /* ── Section header ──────────────────────────────────────── */
 .section-header {
-  display:flex; align-items:center; justify-content:space-between;
-  margin-bottom:20px; flex-wrap:wrap; gap:8px;
+  display:flex; align-items:flex-start; justify-content:space-between;
+  margin-bottom:24px; flex-wrap:wrap; gap:8px;
 }
 .section-title {
   font-size:22px; font-weight:700; color:var(--text-primary);
   text-shadow:0 0 24px rgba(0,191,255,0.15);
+  margin-bottom:6px;
 }
-.section-subtitle { font-size:13.5px; color:var(--text-secondary); margin-top:2px; }
+.section-subtitle { font-size:13.5px; color:var(--text-secondary); margin-top:4px; line-height:1.5; }
 
 /* ── Stat row ────────────────────────────────────────────── */
 .stat-row {
