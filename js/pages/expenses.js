@@ -1,4 +1,4 @@
-import { initPage }    from '../page-init.js';
+import { initPage, saveSec } from '../page-init.js';
 import { save }        from '../store.js';
 import {
   applyScheduledChanges, totalExpenses, expensesByCategory, fmtGBP, round2
@@ -63,7 +63,7 @@ function render(st) {
   // Add expense button
   document.getElementById('add-expense-btn').onclick = async () => {
     st.expenses.items.push({ id:'exp_'+Date.now(), name:'New Expense', category:'Other', monthlyGBP:0, active:true });
-    await save('fin_expenses', st.expenses);
+    await saveSec('fin_expenses', st.expenses);
     render(st);
   };
 }
@@ -91,7 +91,7 @@ function expRow(item, i) {
 }
 
 function bindExpenseEvents(st) {
-  const save_ = async () => { await save('fin_expenses', st.expenses); render(st); };
+  const save_ = async () => { await saveSec('fin_expenses', st.expenses); render(st); };
 
   document.querySelectorAll('.exp-name-input, .exp-cat-input, .exp-amt-input').forEach(el => {
     el.addEventListener('input', () => {
@@ -111,7 +111,7 @@ function bindExpenseEvents(st) {
   document.querySelectorAll('.exp-delete-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       st.expenses.items.splice(parseInt(btn.dataset.idx), 1);
-      await save('fin_expenses', st.expenses);
+      await saveSec('fin_expenses', st.expenses);
       render(st);
     });
   });

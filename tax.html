@@ -45,6 +45,48 @@
         <div class="chart-wrap chart-h-200"><canvas id="chart-tax-line"></canvas></div>
       </div>
 
+      <!-- ════════════ India NRI Tax Module ════════════ -->
+      <div class="jurisdiction-divider mt-20">
+        <div class="jurisdiction-label">India NRI Tax — <span id="india-ay-label">AY 2025-26</span></div>
+      </div>
+
+      <!-- Surcharge warning (shown when income > ₹50L) -->
+      <div id="india-surcharge-banner"></div>
+
+      <!-- Summary cards -->
+      <div class="grid-4 mt-16" id="india-summary-cards"></div>
+
+      <div class="grid-2 mt-20">
+        <div class="panel" data-section="india_tax">
+          <div class="panel-header"><span class="panel-title">India Income Sources (NRI)</span></div>
+          <div id="india-income-fields"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">TDS Deducted in India</span></div>
+          <div class="panel-subtitle">Tax Deducted at Source — usually 30% for NRIs on NRO income</div>
+          <div id="india-tds-fields"></div>
+        </div>
+      </div>
+
+      <div class="panel mt-20" id="india-80e-panel">
+        <div class="panel-header"><span class="panel-title">Section 80E — Education Loan Interest Deduction</span></div>
+        <div id="india-80e-fields"></div>
+      </div>
+
+      <div class="panel mt-20">
+        <div class="panel-header"><span class="panel-title">DTAA Relief &amp; Cross-Border Tax Position</span></div>
+        <div class="panel-subtitle">India-UK Double Tax Avoidance Agreement (1993)</div>
+        <div id="india-dtaa-fields"></div>
+      </div>
+
+      <div class="panel mt-20">
+        <div class="panel-header"><span class="panel-title">ITR Filing Status</span></div>
+        <div class="grid-2 mt-12">
+          <div id="india-itr-fields"></div>
+          <div id="india-itr-status"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>

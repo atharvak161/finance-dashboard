@@ -1,4 +1,4 @@
-import { initPage }  from '../page-init.js';
+import { initPage, saveSec } from '../page-init.js';
 import { save }      from '../store.js';
 import {
   generateAmortisation, amortPayoffDate, amortInterestSaved, amortMonthsSaved,
@@ -143,7 +143,7 @@ function bindDebtFields(st) {
       if (!st.debts.sbi) st.debts.sbi = {};
       const k = el.dataset.key;
       st.debts.sbi[k] = el.type==='number' ? (parseFloat(el.value)||0) : el.value;
-      await save('fin_debts', st.debts);
+      await saveSec('fin_debts', st.debts);
       render(st);
     });
   });
