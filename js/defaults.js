@@ -187,46 +187,9 @@ export const DEFAULTS = {
 
   fin_monthly_log: [],
 
-  fin_ot_shifts: [
-    // May 2026: shifts of £175, £75, £100, £100, £100, £175
-    { id: 'ot-may-1', date: '2026-05-03', grossGBP: 175, note: '', confirmed: true },
-    { id: 'ot-may-2', date: '2026-05-10', grossGBP: 75, note: '', confirmed: true },
-    { id: 'ot-may-3', date: '2026-05-14', grossGBP: 100, note: '', confirmed: true },
-    { id: 'ot-may-4', date: '2026-05-17', grossGBP: 100, note: '', confirmed: true },
-    { id: 'ot-may-5', date: '2026-05-24', grossGBP: 100, note: '', confirmed: true },
-    { id: 'ot-may-6', date: '2026-05-31', grossGBP: 175, note: '', confirmed: true },
-    // June 2026: £100, £100, £100, £100, £175, £100
-    { id: 'ot-jun-1', date: '2026-06-07', grossGBP: 100, note: '', confirmed: true },
-    { id: 'ot-jun-2', date: '2026-06-09', grossGBP: 100, note: '', confirmed: true },
-    { id: 'ot-jun-3', date: '2026-06-14', grossGBP: 100, note: '', confirmed: true },
-    { id: 'ot-jun-4', date: '2026-06-21', grossGBP: 100, note: '', confirmed: true },
-    { id: 'ot-jun-5', date: '2026-06-28', grossGBP: 175, note: '', confirmed: true },
-    { id: 'ot-jun-6', date: '2026-06-29', grossGBP: 100, note: '', confirmed: true },
-    // July 2026: £175, £75, £100, £75
-    { id: 'ot-jul-1', date: '2026-07-05', grossGBP: 175, note: '', confirmed: true },
-    { id: 'ot-jul-2', date: '2026-07-12', grossGBP: 75, note: '', confirmed: true },
-    { id: 'ot-jul-3', date: '2026-07-19', grossGBP: 100, note: '', confirmed: true },
-    { id: 'ot-jul-4', date: '2026-07-26', grossGBP: 75, note: '', confirmed: true },
-    // August 2026 (estimated): £175, £100
-    { id: 'ot-aug-1', date: '2026-08-09', grossGBP: 175, note: '', confirmed: false },
-    { id: 'ot-aug-2', date: '2026-08-23', grossGBP: 100, note: '', confirmed: false },
-    // September 2026 (estimated): £175, £100, £175
-    { id: 'ot-sep-1', date: '2026-09-06', grossGBP: 175, note: '', confirmed: false },
-    { id: 'ot-sep-2', date: '2026-09-13', grossGBP: 100, note: '', confirmed: false },
-    { id: 'ot-sep-3', date: '2026-09-27', grossGBP: 175, note: '', confirmed: false },
-    // October 2026 (estimated): £175, £100
-    { id: 'ot-oct-1', date: '2026-10-11', grossGBP: 175, note: '', confirmed: false },
-    { id: 'ot-oct-2', date: '2026-10-25', grossGBP: 100, note: '', confirmed: false },
-  ],
+  fin_ot_shifts: [],
 
-  fin_ot_monthly_summary: {
-    '2026-05': { totalGross: 725, shiftCount: 6, confirmed: true,  actualNetGBP: 2243.51, varianceGBP: 0 },
-    '2026-06': { totalGross: 675, shiftCount: 6, confirmed: false, actualNetGBP: null,    varianceGBP: null },
-    '2026-07': { totalGross: 425, shiftCount: 4, confirmed: false, actualNetGBP: null,    varianceGBP: null },
-    '2026-08': { totalGross: 275, shiftCount: 2, confirmed: false, actualNetGBP: null,    varianceGBP: null },
-    '2026-09': { totalGross: 450, shiftCount: 3, confirmed: false, actualNetGBP: null,    varianceGBP: null },
-    '2026-10': { totalGross: 275, shiftCount: 2, confirmed: false, actualNetGBP: null,    varianceGBP: null },
-  },
+  fin_ot_monthly_summary: {},
 
   fin_settings: {
     inactivityTimeoutMinutes: 60,
