@@ -17,8 +17,9 @@ export function calculateNetPay({
   const avgOvertimeMonthly = avgOvertimeGrossGBP || 0;
 
   // Salary sacrifice: pension reduces taxable AND NIable pay
+  // Pension is calculated as % of total gross (base + OT) per user request
   const annualGross = (baseMonthly + avgOvertimeMonthly) * 12;
-  const annualPension = (baseSalaryGBP || 0) * ((pensionEmployeeRate || 0) / 100); // salary sacrifice on base only
+  const annualPension = annualGross * ((pensionEmployeeRate || 0) / 100);
   const adjustedGross = Math.max(0, annualGross - annualPension); // taxable and NIable
 
   // Personal Allowance (tapered above £100,000 — £1 PA lost per £2 over £100k)
