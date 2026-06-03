@@ -231,9 +231,11 @@ export function calculateSurplus(netPay, expenses) {
 
 export function indiaTripProgress(goals) {
   const trip = goals?.indiaTrip;
-  if (!trip || !trip.targetGBP) return { pct: 0, remaining: 0, daysLeft: 0, monthsLeft: 0 };
-  const pct  = Math.min(100, round2(((trip.savedGBP || 0) / trip.targetGBP) * 100));
-  const remaining = round2(trip.targetGBP - (trip.savedGBP || 0));
+  if (!trip) return { pct: 0, remaining: 0, daysLeft: 0, monthsLeft: 0 };
+  const target = trip.targetGBP || 3000;
+  const saved  = trip.savedGBP || 0;
+  const pct  = Math.min(100, round2((saved / target) * 100));
+  const remaining = round2(Math.max(0, target - saved));
   const daysLeft  = Math.max(0, Math.round((new Date(trip.deadline) - new Date()) / 86400000));
   const monthsLeft= Math.max(0, round2(daysLeft / 30.44));
   return { pct, remaining, daysLeft, monthsLeft };
