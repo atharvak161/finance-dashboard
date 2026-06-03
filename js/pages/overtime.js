@@ -16,8 +16,6 @@ const TARGET_GBP = 3000;
 const START_BALANCE = state.goals?.indiaTrip?.savedGBP || 600;
 const CURRENT_MONTH = new Date().toISOString().slice(0, 7); // e.g. '2026-06'
 
-// Chart instances kept for teardown on re-render
-let charts = { bar: null, stacked: null, savings: null };
 // What-if slider value (display only, never saved)
 let whatIfExtra = 0;
 
@@ -106,10 +104,8 @@ function render() {
     ${renderShiftLogger()}
     ${renderPredictiveSalary()}
     ${renderSavingsForecast()}
-    ${renderCharts()}
   `;
   attachEvents();
-  renderOTCharts();
 }
 
 // ── Feature A: Summary cards ──────────────────────────────────
@@ -333,175 +329,6 @@ function renderSavingsForecast() {
         <input type="range" id="ot-whatif" class="range-slider mt-8" min="0" max="500" step="25" value="${whatIfExtra}">
       </div>
     </div>`;
-}
-
-// ── Feature D: Charts ─────────────────────────────────────────
-
-function renderCharts() {
-  const p = predictMonth(CURRENT_MONTH);
-  const lastMonthYm = MONTHS[Math.max(0, MONTHS.indexOf(CURRENT_MONTH) - 1)];
-  const lastTotal = getMonthTotal(lastMonthYm);
-  const thisTotal = getMonthTotal(CURRENT_MONTH);
-  const pct = lastTotal > 0 ? Math.min(100, round2((thisTotal / lastTotal) * 100)) : (thisTotal > 0 ? 100 : 0);
-  const fillCls = pct >= 100 ? 'positive' : pct >= 50 ? 'info' : 'warning';
-
-  return `
-    <div class="grid-2 mt-20">
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">Monthly OT &amp; Rolling Average</span></div>
-        <div class="chart-wrap chart-h-260"><canvas id="ot-chart-bar"></canvas></div>
-      </div>
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">Net Pay Split — Base vs OT</span></div>
-        <div class="chart-wrap chart-h-260"><canvas id="ot-chart-stacked"></canvas></div>
-      </div>
-    </div>
-    <div class="grid-2 mt-20">
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">Savings vs £3k Target</span></div>
-        <div class="chart-wrap chart-h-260"><canvas id="ot-chart-savings"></canvas></div>
-      </div>
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">Current Month vs Last Month</span></div>
-        <div class="progress-wrap mt-12">
-          <div class="progress-label">
-            <span>${MONTH_LABELS[CURRENT_MONTH]||CURRENT_MONTH}: ${fmtGBP(thisTotal)}</span>
-            <span>${MONTH_LABELS[lastMonthYm]||lastMonthYm}: ${fmtGBP(lastTotal)}</span>
-          </div>
-          <div class="progress-track"><div class="progress-fill ${fillCls}" style="width:${pct}%"></div></div>
-          <div class="progress-label"><span>${pct.toFixed(0)}% of last month</span><span class="mono">${fmtGBP(thisTotal)} / ${fmtGBP(lastTotal)}</span></div>
-        </div>
-        <div class="stat-row mt-16"><span class="stat-label">Predicted net this month</span><span class="stat-value mono text-positive">${fmtGBP(p.pay.netWithOT)}</span></div>
-      </div>
-    </div>`;
-}
-
-function renderOTCharts() {
-  const confirmedFlags = MONTHS.map(isConfirmed);
-  const labels = MONTHS.map(m => MONTH_LABELS[m]);
-  const otData = MONTHS.map(getMonthTotal);
-
-  // Rolling 3-month average series
-  const avgData = MONTHS.map((m, i) => {
-    const window = MONTHS.slice(Math.max(0, i - 2), i + 1).map(getMonthTotal);
-    return round2(window.reduce((s, v) => s + v, 0) / window.length);
-  });
-
-  const grid = 'rgba(0,191,255,0.07)';
-  const tick = '#3d5473';
-  const baseScales = {
-    x: { grid: { color: grid }, ticks: { color: tick, font: { size: 11 } } },
-    y: { grid: { color: grid }, ticks: { color: tick, font: { size: 11 }, callback: v => '£' + v } },
-  };
-
-  // Destroy old instances
-  Object.values(charts).forEach(c => c && c.destroy());
-
-  // Chart 1 — bar + rolling avg line
-  const ctx1 = document.getElementById('ot-chart-bar')?.getContext('2d');
-  if (ctx1) {
-    charts.bar = new Chart(ctx1, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: 'OT Gross', data: otData, order: 2,
-            backgroundColor: ctx => confirmedFlags[ctx.dataIndex] ? '#00ff9d' : 'rgba(0,255,157,0.4)', borderRadius: 4 },
-          { label: '3-Month Avg', data: avgData, type: 'line', order: 1,
-            borderColor: '#f59e0b', backgroundColor: '#f59e0b', pointRadius: 4, tension: 0.3, borderWidth: 2 },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: tick, font: { size: 11 } } } },
-        scales: baseScales,
-      },
-    });
-  }
-
-  // Chart 2 — stacked base net + OT net
-  const ctx2 = document.getElementById('ot-chart-stacked')?.getContext('2d');
-  if (ctx2) {
-    const baseNet = MONTHS.map(m => predictMonth(m).pay.netBase);
-    const otNet = MONTHS.map(m => {
-      const p = predictMonth(m);
-      return round2(Math.max(0, p.pay.netWithOT - p.pay.netBase));
-    });
-    charts.stacked = new Chart(ctx2, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: 'Base net', data: baseNet, backgroundColor: '#00bfff', borderRadius: 4 },
-          { label: 'OT net', data: otNet, backgroundColor: '#00e676', borderRadius: 4 },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: tick, font: { size: 11 } } } },
-        scales: {
-          x: { stacked: true, grid: { color: grid }, ticks: { color: tick, font: { size: 11 } } },
-          y: { stacked: true, grid: { color: grid }, ticks: { color: tick, font: { size: 11 }, callback: v => '£' + v } },
-        },
-      },
-    });
-  }
-
-  // Chart 3 — savings line (solid confirmed, dashed projected) + target line
-  const ctx3 = document.getElementById('ot-chart-savings')?.getContext('2d');
-  if (ctx3) {
-    let running = START_BALANCE;
-    const savingsPts = [];
-    MONTHS.forEach(ym => {
-      const p = predictMonth(ym);
-      const summary = state.otMonthlySummary[ym] || {};
-      const netPay = (isConfirmed(ym) && summary.actualNetGBP != null) ? summary.actualNetGBP : p.pay.netWithOT;
-      let saved;
-      if (ym === '2026-05') saved = 100;
-      else saved = round2(round2(netPay - p.monthExpenses) + p.indiaRedirect);
-      running = round2(running + saved);
-      savingsPts.push(running);
-    });
-
-    // Split confirmed (solid) vs projected (dashed) using segment styling
-    const lastConfirmedIdx = MONTHS.reduce((acc, m, i) => isConfirmed(m) ? i : acc, -1);
-
-    charts.savings = new Chart(ctx3, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Running savings',
-            data: savingsPts,
-            borderColor: '#00bfff',
-            backgroundColor: 'rgba(0,191,255,0.08)',
-            pointRadius: 4,
-            tension: 0.25,
-            fill: true,
-            segment: {
-              borderDash: ctx => ctx.p0DataIndex >= lastConfirmedIdx ? [6, 4] : undefined,
-              borderColor: ctx => ctx.p0DataIndex >= lastConfirmedIdx ? '#f59e0b' : '#00bfff',
-            },
-          },
-          {
-            label: '£3k Target',
-            data: MONTHS.map(() => TARGET_GBP),
-            borderColor: '#00e676',
-            borderWidth: 1.5,
-            borderDash: [4, 4],
-            pointRadius: 0,
-            fill: false,
-          },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: tick, font: { size: 11 } } } },
-        scales: baseScales,
-      },
-    });
-  }
 }
 
 // ── Events ────────────────────────────────────────────────────

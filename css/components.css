@@ -627,3 +627,16 @@ textarea.form-input { font-family:var(--font-body); resize:vertical; min-height:
   color: var(--text-secondary);
 }
 .form-check-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #ff9100; cursor: pointer; }
+
+/* ── Dashboard tabs ─────────────────────────────────────────── */
+.dash-tabs { display:flex; gap:4px; border-bottom:1px solid rgba(0,191,255,0.15); margin-bottom:20px; overflow-x:auto; padding-bottom:0; flex-wrap:nowrap; }
+.dash-tab { padding:8px 16px; background:none; border:none; border-bottom:2px solid transparent; color:var(--text-secondary); font-family:var(--font-body); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap; margin-bottom:-1px; transition:all 0.2s; }
+.dash-tab:hover { color:var(--text-primary); }
+.dash-tab.active { color:var(--color-info); border-bottom-color:var(--color-info); }
+
+/* ── Live GBP/INR rate in top bar ───────────────────────────── */
+.topbar-rate { display:flex; align-items:center; gap:8px; font-family:var(--font-mono); font-size:12px; }
+.topbar-rate-value { color:var(--color-positive,#4caf50); font-weight:600; }
+.topbar-rate-time { color:var(--text-secondary); font-size:10px; }
+.topbar-rate-refresh { background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:14px; padding:2px 6px; border-radius:4px; }
+.topbar-rate-refresh:hover { background:rgba(255,255,255,0.08); }

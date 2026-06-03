@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -20,61 +19,20 @@
       <div class="section-header">
         <div>
           <div class="section-title">Debts</div>
-          <div class="section-subtitle">SBI Education Loan</div>
+          <div class="section-subtitle">SBI Education Loan — view &amp; edit loan details</div>
         </div>
       </div>
 
-      <div class="grid-2">
-        <div class="panel" data-section="debts">
-          <div class="panel-header"><span class="panel-title">Loan Details</span></div>
-          <div id="debt-fields"></div>
-        </div>
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">Current Metrics</span></div>
-          <div id="debt-metrics"></div>
-        </div>
-      </div>
+      <!-- Summary cards (read-only, computed) -->
+      <div class="grid-4" id="debt-summary"></div>
 
-      <div class="panel mt-20">
-        <div class="panel-header"><span class="panel-title">Overpayment Simulator</span></div>
-        <div id="debt-simulator"></div>
-      </div>
-
-      <div class="panel mt-20">
-        <div class="panel-header"><span class="panel-title">Overpayment Comparison</span></div>
-        <div class="table-wrap" id="debt-compare-wrap"></div>
-      </div>
-
-      <div class="grid-2 mt-20">
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Amortisation Schedule</span>
-            <button class="btn btn-ghost btn-sm" id="amort-toggle-btn">Show all</button>
-          </div>
-          <div class="table-wrap" id="amort-table-wrap"></div>
+      <!-- Edit section -->
+      <div class="panel mt-20" data-section="debts">
+        <div class="panel-header">
+          <span class="panel-title">Loan Details</span>
+          <button class="btn btn-secondary btn-sm" id="debt-edit-btn">✏️ Edit Loan Details</button>
         </div>
-        <div>
-          <div class="panel">
-            <div class="panel-header"><span class="panel-title">Annual Interest vs Principal</span></div>
-            <div class="chart-wrap chart-h-200"><canvas id="chart-debt-stacked"></canvas></div>
-          </div>
-          <div class="panel mt-16">
-            <div class="panel-header"><span class="panel-title">Balance Over Time</span></div>
-            <div class="chart-wrap chart-h-200"><canvas id="chart-debt-line"></canvas></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid-2 mt-20">
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">Interest vs Principal Paid to Date</span></div>
-          <div class="chart-wrap chart-h-260"><canvas id="chart-interest-principal"></canvas></div>
-          <div id="loan-paid-stats" class="mt-12"></div>
-        </div>
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">Debt vs Assets Race</span></div>
-          <div class="chart-wrap chart-h-260"><canvas id="chart-debt-race"></canvas></div>
-        </div>
+        <div id="debt-fields"></div>
       </div>
 
     </div>

@@ -1,17 +1,10 @@
 import { initPage, saveSec } from '../page-init.js';
-import { save }      from '../store.js';
 import {
-  generateAmortisation, amortPayoffDate, amortInterestSaved, amortMonthsSaved,
-  loanPaidToDate, calculateNetPay, applyScheduledChanges, totalExpenses, calculateSurplus,
-  fmtGBP, fmtINR, fmtMonths, round2
+  generateAmortisation, amortPayoffDate, fmtGBP, fmtINR, round2
 } from '../calc.js';
 
-// Hoisted before top-level await
-const C = { negative:'#ff1744', positive:'#00e676', info:'#00bfff', grid:'rgba(0,191,255,0.07)', tick:'#3d5473' };
-const charts = {};
-
 const state = await initPage('debts');
-let amortShowAll = false;
+let editing = false;
 render(state);
 
 // ── Render ─────────────────────────────────────────────────────
@@ -20,269 +13,110 @@ function render(st) {
   const sbi  = st.debts?.sbi || {};
   const rate = st.settings?.inrGbpRate || 83;
 
-  // ── Fields (2-col grid) ───────────────────────────────────
-  document.getElementById('debt-fields').innerHTML = `
+  const sch    = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, sbi.extraMonthlyINR||0);
+  const gbpOut = round2((sbi.outstandingINR||0) / rate);
+  const totalInterestRemaining = sch[sch.length-1]?.totalInterest || 0;
+
+  // ── Summary cards (read-only, computed) ───────────────────
+  document.getElementById('debt-summary').innerHTML = `
+    <div class="metric-card">
+      <div class="label">Outstanding Balance</div>
+      <div class="value text-negative">${fmtINR(sbi.outstandingINR||0)}</div>
+      <div class="sub">${fmtGBP(gbpOut)}</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Monthly EMI</div>
+      <div class="value">${fmtINR(sbi.emiINR||0)}</div>
+      <div class="sub">${sbi.extraMonthlyINR ? '+ '+fmtINR(sbi.extraMonthlyINR)+' extra' : 'No extra payment'}</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Estimated Payoff</div>
+      <div class="value">${amortPayoffDate(sch)}</div>
+      <div class="sub">${sch.length} months remaining</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Interest Remaining</div>
+      <div class="value text-negative">${fmtINR(totalInterestRemaining)}</div>
+      <div class="sub">${fmtGBP(round2(totalInterestRemaining/rate))} · @ ${sbi.ratePercent||9.9}%</div>
+    </div>`;
+
+  renderFields(st, sbi);
+}
+
+// ── Edit / Save section ────────────────────────────────────────
+
+function renderFields(st, sbi) {
+  const wrap = document.getElementById('debt-fields');
+  const btn  = document.getElementById('debt-edit-btn');
+
+  if (!editing) {
+    // Read-only view
+    wrap.innerHTML = `
+      <div class="stat-row"><span class="stat-label">Outstanding balance (₹)</span><span class="stat-value mono">${fmtINR(sbi.outstandingINR||0)}</span></div>
+      <div class="stat-row"><span class="stat-label">Original principal (₹)</span><span class="stat-value mono">${fmtINR(sbi.principalINR||0)}</span></div>
+      <div class="stat-row"><span class="stat-label">Interest rate (%)</span><span class="stat-value mono">${sbi.ratePercent||0}%</span></div>
+      <div class="stat-row"><span class="stat-label">Monthly EMI (₹)</span><span class="stat-value mono">${fmtINR(sbi.emiINR||0)}</span></div>
+      <div class="stat-row"><span class="stat-label">Extra monthly (₹)</span><span class="stat-value mono">${fmtINR(sbi.extraMonthlyINR||0)}</span></div>
+      <div class="stat-row"><span class="stat-label">Loan start date</span><span class="stat-value mono">${sbi.startDate||'—'}</span></div>
+      <div class="stat-row"><span class="stat-label">Co-applicant</span><span class="stat-value">${sbi.coApplicant||'—'}</span></div>`;
+    btn.textContent = '✏️ Edit Loan Details';
+    btn.onclick = () => { editing = true; render(st); };
+    return;
+  }
+
+  // Edit form — snapshot current values so Cancel can discard edits
+  const draft = { ...sbi };
+  wrap.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
-      ${dField('Outstanding (₹)', 'outstandingINR', sbi.outstandingINR)}
-      ${dField('Interest rate (%)', 'ratePercent', sbi.ratePercent)}
-      ${dField('EMI (₹/mo)', 'emiINR', sbi.emiINR)}
-      ${dField('Extra payment (₹/mo)', 'extraMonthlyINR', sbi.extraMonthlyINR)}
+      ${dField('Outstanding balance (₹)', 'outstandingINR', draft.outstandingINR)}
+      ${dField('Original principal (₹)', 'principalINR', draft.principalINR)}
+      ${dField('Interest rate (%)', 'ratePercent', draft.ratePercent)}
+      ${dField('Monthly EMI (₹)', 'emiINR', draft.emiINR)}
+      ${dField('Extra monthly (₹)', 'extraMonthlyINR', draft.extraMonthlyINR)}
       <div class="form-group">
-        <label class="form-label">Start date</label>
-        <input type="date" class="form-input debt-field" data-key="startDate" value="${sbi.startDate||''}" />
+        <label class="form-label">Loan start date</label>
+        <input type="date" class="form-input debt-field" data-key="startDate" value="${draft.startDate||''}" />
       </div>
       <div class="form-group">
         <label class="form-label">Co-applicant</label>
-        <input type="text" class="form-input debt-field" data-key="coApplicant" value="${sbi.coApplicant||''}" />
+        <input type="text" class="form-input debt-field" data-key="coApplicant" value="${draft.coApplicant||''}" />
       </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+      <button class="btn btn-secondary" id="debt-cancel-btn" type="button">Cancel</button>
+      <button class="btn btn-primary" id="debt-save-btn" type="button">Save</button>
     </div>`;
-  bindDebtFields(st);
 
-  const sch    = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, sbi.extraMonthlyINR||0);
-  const gbpOut = round2((sbi.outstandingINR||0) / rate);
-
-  // ── Metrics ───────────────────────────────────────────────
-  document.getElementById('debt-metrics').innerHTML = `
-    <div class="stat-row"><span class="stat-label">Outstanding (GBP)</span><span class="stat-value mono text-negative">${fmtGBP(gbpOut)}</span></div>
-    <div class="stat-row"><span class="stat-label">Monthly Interest</span><span class="stat-value mono">${fmtINR(sch[0]?.interest||0)}</span></div>
-    <div class="stat-row"><span class="stat-label">Monthly Principal</span><span class="stat-value mono">${fmtINR(sch[0]?.principal||0)}</span></div>
-    <div class="stat-row"><span class="stat-label">Remaining months</span><span class="stat-value mono">${fmtMonths(sch.length)}</span></div>
-    <div class="stat-row"><span class="stat-label">Payoff date</span><span class="stat-value mono">${amortPayoffDate(sch)}</span></div>
-    <div class="stat-row"><span class="stat-label">Total interest remaining</span><span class="stat-value mono text-negative">${fmtINR(sch[sch.length-1]?.totalInterest||0)}</span></div>`;
-
-  // ── Overpayment simulator ─────────────────────────────────
-  const curExtra = sbi.extraMonthlyINR || 0;
-  document.getElementById('debt-simulator').innerHTML = `
-    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
-      <div style="flex:1;min-width:240px">
-        <label class="form-label" style="display:flex;justify-content:space-between">
-          Extra monthly payment <span class="mono text-info" id="slider-val">${fmtINR(curExtra)}</span>
-        </label>
-        <input type="range" class="range-slider" id="overpay-slider" min="0" max="50000" step="1000" value="${curExtra}" style="margin-top:8px">
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)"><span>₹0</span><span>₹50,000</span></div>
-      </div>
-      <div id="simulator-result" style="min-width:220px"></div>
-    </div>`;
-  updateSimulator(sbi, curExtra);
-  document.getElementById('overpay-slider').addEventListener('input', e => {
-    const extra = parseInt(e.target.value);
-    document.getElementById('slider-val').textContent = fmtINR(extra);
-    updateSimulator(sbi, extra);
+  // Edits only mutate the local draft until Save is pressed.
+  wrap.querySelectorAll('.debt-field').forEach(el => {
+    el.addEventListener('input', () => {
+      draft[el.dataset.key] = el.type === 'number' ? (parseFloat(el.value)||0) : el.value;
+    });
   });
 
-  // ── Comparison table ──────────────────────────────────────
-  const comparisons = [0,10000,20000,35000].map(extra => {
-    const s = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, extra);
-    return { extra, months:s.length, payoff:amortPayoffDate(s),
-             saved:amortInterestSaved(sch,s), monthsSaved:amortMonthsSaved(sch,s) };
-  });
-  document.getElementById('debt-compare-wrap').innerHTML = `
-    <table class="compare-table">
-      <thead><tr><th>Extra/mo</th><th>Months</th><th>Payoff</th><th>Interest Saved</th><th>Months Saved</th></tr></thead>
-      <tbody>
-        ${comparisons.map((c,i)=>`<tr class="${i===0?'current-row':''} ${i===3?'best-row':''}">
-          <td>${c.extra===0?'Current (no extra)':fmtINR(c.extra)}</td>
-          <td class="mono">${fmtMonths(c.months)}</td>
-          <td class="mono">${c.payoff}</td>
-          <td class="mono text-positive">${c.saved>0?fmtINR(c.saved):'—'}</td>
-          <td class="mono text-positive">${c.monthsSaved>0?fmtMonths(c.monthsSaved):'—'}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>`;
+  btn.textContent = 'Editing…';
+  btn.onclick = null;
 
-  renderAmortTable(sch);
-  document.getElementById('amort-toggle-btn').onclick = () => {
-    amortShowAll = !amortShowAll;
-    renderAmortTable(sch);
-    document.getElementById('amort-toggle-btn').textContent = amortShowAll ? 'Show less' : 'Show all';
+  document.getElementById('debt-cancel-btn').onclick = () => {
+    editing = false;
+    render(st);
   };
 
-  renderDebtCharts(sbi);
-  renderInterestPrincipalDonut(st);
-  renderDebtRaceChart(st);
-}
-
-function updateSimulator(sbi, extra) {
-  const base_ = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, 0);
-  const with_  = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, extra);
-  document.getElementById('simulator-result').innerHTML = extra===0 ? '' : `
-    <div class="stat-row"><span class="stat-label">New payoff</span><span class="stat-value mono">${amortPayoffDate(with_)}</span></div>
-    <div class="stat-row"><span class="stat-label">Months saved</span><span class="stat-value mono text-positive">${fmtMonths(amortMonthsSaved(base_,with_))}</span></div>
-    <div class="stat-row"><span class="stat-label">Interest saved</span><span class="stat-value mono text-positive">${fmtINR(amortInterestSaved(base_,with_))}</span></div>`;
-}
-
-function renderAmortTable(sch) {
-  const PREVIEW = 24;
-  const rows = amortShowAll ? sch : sch.slice(0, PREVIEW);
-  const milestones = [Math.floor(sch.length*0.25), Math.floor(sch.length*0.5), Math.floor(sch.length*0.75)];
-  document.getElementById('amort-table-wrap').innerHTML = `
-    <table class="data-table">
-      <thead><tr><th>#</th><th class="td-right">Interest</th><th class="td-right">Principal</th><th class="td-right">Balance</th></tr></thead>
-      <tbody>
-        ${rows.map(r=>`<tr class="${milestones.includes(r.month)?'milestone':''}">
-          <td>${r.month}</td>
-          <td class="td-right mono">${fmtINR(r.interest)}</td>
-          <td class="td-right mono">${fmtINR(r.principal)}</td>
-          <td class="td-right mono">${fmtINR(r.closing)}</td>
-        </tr>`).join('')}
-        ${!amortShowAll&&sch.length>PREVIEW?`<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:12px">… ${sch.length-PREVIEW} more rows</td></tr>`:''}
-      </tbody>
-    </table>`;
-}
-
-// ── Auto-save ─────────────────────────────────────────────────
-
-function bindDebtFields(st) {
-  document.querySelectorAll('.debt-field').forEach(el => {
-    el.addEventListener('input', () => {
-      if (!st.debts.sbi) st.debts.sbi = {};
-      const k = el.dataset.key;
-      st.debts.sbi[k] = el.type==='number' ? (parseFloat(el.value)||0) : el.value;
-    });
-    el.addEventListener('change', async () => {
-      if (!st.debts.sbi) st.debts.sbi = {};
-      const k = el.dataset.key;
-      st.debts.sbi[k] = el.type==='number' ? (parseFloat(el.value)||0) : el.value;
-      await saveSec('fin_debts', st.debts);
-      render(st);
-    });
-  });
+  document.getElementById('debt-save-btn').onclick = async () => {
+    const saveBtn = document.getElementById('debt-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    if (!st.debts.sbi) st.debts.sbi = {};
+    Object.assign(st.debts.sbi, draft);
+    await saveSec('fin_debts', st.debts);
+    editing = false;
+    render(st);
+  };
 }
 
 function dField(label, key, value) {
   return `<div class="form-group">
     <label class="form-label">${label}</label>
-    <input type="number" class="form-input debt-field" data-key="${key}" value="${value||''}" step="any" />
+    <input type="number" class="form-input debt-field" data-key="${key}" value="${value??''}" step="any" />
   </div>`;
-}
-
-// ── Charts ─────────────────────────────────────────────────────
-
-function getCtx(id) { if(charts[id]){charts[id].destroy();delete charts[id];}return document.getElementById(id)?.getContext('2d')||null; }
-
-// ── Interest vs Principal Paid to Date Donut ──────────────────
-
-function renderInterestPrincipalDonut(st) {
-  const sbi  = st.debts?.sbi || {};
-  const rate = st.settings?.inrGbpRate || 83;
-  const paid = loanPaidToDate(sbi);
-  const intGBP  = round2(paid.interestPaid / rate);
-  const prinGBP = round2(paid.principalPaid / rate);
-  const remGBP  = round2((paid.remaining || 0) / rate);
-
-  const statsEl = document.getElementById('loan-paid-stats');
-  if (statsEl) {
-    statsEl.innerHTML = `
-      <div class="stat-row"><span class="stat-label">Interest paid to date</span><span class="stat-value mono text-negative">${fmtINR(paid.interestPaid)} (${fmtGBP(intGBP)})</span></div>
-      <div class="stat-row"><span class="stat-label">Principal paid to date</span><span class="stat-value mono text-positive">${fmtINR(paid.principalPaid)} (${fmtGBP(prinGBP)})</span></div>
-      <div class="stat-row"><span class="stat-label">Remaining balance</span><span class="stat-value mono text-negative">${fmtINR(paid.remaining)} (${fmtGBP(remGBP)})</span></div>`;
-  }
-
-  const ctx = getCtx('chart-interest-principal');
-  if (!ctx) return;
-  charts['chart-interest-principal'] = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Interest Paid', 'Principal Paid', 'Remaining'],
-      datasets: [{ data: [intGBP, prinGBP, remGBP], backgroundColor: [C.negative + 'cc', C.positive + 'cc', '#5c6170cc'], borderWidth: 0, hoverOffset: 6 }],
-    },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
-      animation: { animateRotate: true, animateScale: true, duration: 900, easing: 'easeInOutBack' },
-      plugins: { legend: { display: true, labels: { color: C.tick, boxWidth: 10, font: { size: 11 } } },
-        tooltip: { backgroundColor: '#252830', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#d9dde2', bodyColor: '#8e9099', padding: 10,
-          callbacks: { label: c => ` £${Math.round(c.raw).toLocaleString()} — ${c.label}` } } },
-    },
-  });
-}
-
-// ── Debt vs Assets Race ───────────────────────────────────────
-
-function renderDebtRaceChart(st) {
-  const ctx = getCtx('chart-debt-race');
-  if (!ctx) return;
-  const sbi    = st.debts?.sbi || {};
-  const rate   = st.settings?.inrGbpRate || 83;
-  const inv    = st.investments || { cashAccounts: [], pensions: [], ulips: [] };
-  const inc    = st.income || {};
-  const pay    = calculateNetPay(inc);
-  const eff    = applyScheduledChanges(st.expenses || { items: [], scheduledChanges: [] });
-  const surplus= calculateSurplus(pay.netWithOT, totalExpenses(eff));
-
-  const cashTotal    = inv.cashAccounts.reduce((s, a) => s + (a.balanceGBP || 0), 0);
-  const pensionTotal = inv.pensions.reduce((s, p) => s + (p.valueGBP || 0), 0);
-  let currentAssets  = round2(cashTotal + pensionTotal);
-
-  const sch = generateAmortisation(sbi.outstandingINR || 0, sbi.ratePercent || 9.9, sbi.emiINR || 34090, sbi.extraMonthlyINR || 0);
-  const months = Math.min(sch.length, 120);
-  const step   = Math.max(1, Math.floor(months / 24));
-  const labels = [], debtLine = [], assetLine = [];
-
-  for (let m = 0; m <= months; m += step) {
-    labels.push(`M${m}`);
-    debtLine.push(round2((sch[m]?.closing || 0) / rate));
-    assetLine.push(round2(currentAssets + surplus * m));
-  }
-
-  // Find crossover
-  let crossoverLabel = null;
-  for (let i = 1; i < assetLine.length; i++) {
-    if (assetLine[i] >= debtLine[i] && assetLine[i-1] < debtLine[i-1]) {
-      crossoverLabel = labels[i];
-      break;
-    }
-  }
-
-  const base_ = { responsive: true, maintainAspectRatio: false, animation: { duration: 700, easing: 'easeInOutQuart' },
-    plugins: { legend: { display: true, labels: { color: C.tick, boxWidth: 10, font: { size: 11 } } }, tooltip: { backgroundColor: '#252830', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#d9dde2', bodyColor: '#8e9099', padding: 10 } },
-    scales: { x: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 } } },
-              y: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, callback: v => '£' + Math.round(v).toLocaleString() } } },
-  };
-
-  charts['chart-debt-race'] = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets: [
-      { label: 'Debt (GBP)', data: debtLine, borderColor: C.negative, backgroundColor: C.negative + '22', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
-      { label: 'Assets (GBP)', data: assetLine, borderColor: C.positive, backgroundColor: C.positive + '11', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
-    ]},
-    options: { ...base_,
-      plugins: { ...base_.plugins,
-        tooltip: { ...base_.plugins.tooltip,
-          callbacks: {
-            afterBody: (items) => {
-              const idx = items[0]?.dataIndex;
-              return (crossoverLabel && labels[idx] === crossoverLabel) ? ['*** Assets overtake Debt! ***'] : [];
-            }
-          }
-        }
-      }
-    },
-  });
-}
-
-function renderDebtCharts(sbi) {
-  const sch    = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, 0);
-  const schEx  = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, sbi.extraMonthlyINR||0);
-  const base_  = { responsive:true, maintainAspectRatio:false, animation:{duration:700,easing:'easeInOutQuart'},
-    plugins:{ legend:{display:true,labels:{color:C.tick,boxWidth:10,font:{size:11}}}, tooltip:{backgroundColor:'rgba(9,12,20,0.96)',borderColor:'rgba(0,191,255,0.25)',borderWidth:1,titleColor:'#00bfff',bodyColor:'#7a96b3',padding:10} },
-    scales:{ x:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11}}}, y:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11}}} },
-  };
-  const years = Math.min(Math.ceil(sch.length/12),10);
-  const yLabels = Array.from({length:years},(_,i)=>`Yr ${i+1}`);
-  const annI=[],annP=[];
-  for(let y=0;y<years;y++){const sl=sch.slice(y*12,(y+1)*12);annI.push(round2(sl.reduce((s,r)=>s+r.interest,0)/1000));annP.push(round2(sl.reduce((s,r)=>s+r.principal,0)/1000));}
-  const ctxStk=getCtx('chart-debt-stacked');
-  if(ctxStk){charts['chart-debt-stacked']=new Chart(ctxStk,{type:'bar',data:{labels:yLabels,datasets:[
-    {label:'Interest (₹k)',data:annI,backgroundColor:C.negative+'cc',borderRadius:3,animations:{y:{from:0,duration:600,easing:'easeOutQuart'}}},
-    {label:'Principal (₹k)',data:annP,backgroundColor:C.positive+'cc',borderRadius:3},
-  ]},options:{...base_,scales:{x:{stacked:true,grid:{color:C.grid},ticks:{color:C.tick,font:{size:11}}},y:{stacked:true,grid:{color:C.grid},ticks:{color:C.tick,font:{size:11}}}}}});}
-  const step=Math.max(1,Math.floor(sch.length/24));
-  const lnLbls=sch.filter((_,i)=>i%step===0).map(r=>`M${r.month}`);
-  const balBase=sch.filter((_,i)=>i%step===0).map(r=>round2(r.closing/100000));
-  const balEx=schEx.filter((_,i)=>i%step===0).map(r=>round2(r.closing/100000));
-  while(balEx.length<balBase.length)balEx.push(0);
-  const ctxLn=getCtx('chart-debt-line');
-  if(ctxLn){charts['chart-debt-line']=new Chart(ctxLn,{type:'line',data:{labels:lnLbls,datasets:[
-    {label:'Base EMI',data:balBase,borderColor:C.negative,backgroundColor:C.negative+'22',fill:true,tension:0.3,pointRadius:0,borderWidth:2},
-    {label:`+₹${sbi.extraMonthlyINR||0}/mo`,data:balEx,borderColor:C.positive,backgroundColor:C.positive+'11',fill:true,tension:0.3,pointRadius:0,borderWidth:2},
-  ]},options:{...base_,scales:{...base_.scales,y:{...base_.scales.y,ticks:{...base_.scales.y.ticks,callback:v=>'₹'+v+'L'}}}}});}
 }
