@@ -12,6 +12,8 @@ renderPage();
 
 function renderPage() {
   const content = document.getElementById('content');
+  if (!content) { console.error('Income: #content not found'); return; }
+  try {
   content.innerHTML = `
     <div class="section-header">
       <div>
@@ -24,6 +26,11 @@ function renderPage() {
       ${renderEditSection()}
     </div>`;
   attachEvents();
+  } catch(e) {
+    console.error('Income page render error:', e);
+    content.innerHTML = `<div style="color:#ff4d4d;padding:24px;font-family:monospace;font-size:12px">
+      Income page error: ${e.message}<br><pre>${e.stack}</pre></div>`;
+  }
 }
 
 // ── Summary cards (read-only) ─────────────────────────────────
