@@ -181,11 +181,15 @@ function renderOverview(host, st) {
   const totalExp  = totalExpenses(effItems);
   const surplus   = calculateSurplus(pay.netWithOT, totalExp);
   const nw        = calculateNetWorth(inv, dbt, rate);
-  const india     = indiaTripProgress(goals);
-  const emergency = emergencyFundProgress(inv, goals);
-  const savingsRate = pay.netWithOT > 0 ? round2((surplus / pay.netWithOT) * 100) : 0;
 
   const cashBalance = (inv.cashAccounts || []).reduce((s, a) => s + (a.balanceGBP || 0), 0);
+
+  // India trip saved = explicitly saved amount + liquid cash savings (Revolut etc.)
+  const indiaTotalSaved = round2((goals.indiaTrip?.savedGBP || 0) + cashBalance);
+  const indiaGoals = { ...goals, indiaTrip: { ...goals.indiaTrip, savedGBP: indiaTotalSaved } };
+  const india     = indiaTripProgress(indiaGoals);
+  const emergency = emergencyFundProgress(inv, goals);
+  const savingsRate = pay.netWithOT > 0 ? round2((surplus / pay.netWithOT) * 100) : 0;
   const runway = emergencyRunwayMonths(cashBalance, totalExp);
   const runwayColor = runway >= 6 ? 'positive' : runway >= 3 ? 'warning' : 'negative';
 
@@ -206,7 +210,7 @@ function renderOverview(host, st) {
       ${metricCard('Savings Rate', fmtPct(savingsRate), savingsRate>=20?'positive':savingsRate>=10?'warning':'negative', 'Benchmark 20%+')}
       ${metricCard('Emergency Runway', runway.toFixed(1) + ' months', runwayColor, runway>=6?'Excellent':runway>=3?'3–6mo target':'Build fund')}
       ${metricCard('SBI Outstanding', fmtGBP(nw.sbiGBP), 'negative', fmtINR(dbt.sbi?.outstandingINR || 0))}
-      ${metricCard('India Trip', fmtPct(india.pct), india.pct>=80?'positive':'info', `${fmtGBP(goals.indiaTrip?.savedGBP||0)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`)}
+      ${metricCard('India Trip', fmtPct(india.pct), india.pct>=80?'positive':'info', `${fmtGBP(indiaTotalSaved)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`)}
     </div>
 
     <div class="grid-2 mt-20">
@@ -224,7 +228,7 @@ function renderOverview(host, st) {
   const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
   set('ov-val-debt', fmtPct(debtPct));       set('ov-lbl-debt', `${fmtGBP(totalDebt)} remaining`);
   set('ov-val-emergency', fmtPct(emergency.pct)); set('ov-lbl-emergency', `${fmtGBP(emergency.savings)} of ${fmtGBP(emergency.target)}`);
-  set('ov-val-india', fmtPct(india.pct));    set('ov-lbl-india', `${fmtGBP(goals.indiaTrip?.savedGBP||0)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`);
+  set('ov-val-india', fmtPct(india.pct));    set('ov-lbl-india', `${fmtGBP(indiaTotalSaved)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`);
 
   // Net pay trend
   const ctxTrend = getCtx('ov-chart-trend');
@@ -606,7 +610,10 @@ function renderGoals(host, st) {
   const rate  = st.settings?.inrGbpRate || 83;
   const inv   = st.investments || { cashAccounts:[] };
   const goals = st.goals || {};
-  const india = indiaTripProgress(goals);
+  // India trip saved = dedicated savings + cash account balances (Revolut etc.)
+  const goalsCashBalance = (inv.cashAccounts || []).reduce((s, a) => s + (a.balanceGBP || 0), 0);
+  const goalIndiaTotalSaved = round2((goals.indiaTrip?.savedGBP || 0) + goalsCashBalance);
+  const india = indiaTripProgress({ ...goals, indiaTrip: { ...goals.indiaTrip, savedGBP: goalIndiaTotalSaved } });
   const emergency = emergencyFundProgress(inv, goals);
   const nw = calculateNetWorth(inv, st.debts || { sbi:{} }, rate);
   const target = goals.wealthTargetGBP || 4760000;
@@ -625,7 +632,7 @@ function renderGoals(host, st) {
     </div>`;
 
   const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
-  set('goal-val-india', fmtPct(india.pct));        set('goal-lbl-india', `${fmtGBP(goals.indiaTrip?.savedGBP||0)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`);
+  set('goal-val-india', fmtPct(india.pct));        set('goal-lbl-india', `${fmtGBP(goalIndiaTotalSaved)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`);
   set('goal-val-emergency', fmtPct(emergency.pct)); set('goal-lbl-emergency', `${fmtGBP(emergency.savings)} of ${fmtGBP(emergency.target)}`);
   set('goal-val-wealth', fmtPct(wealthPct));        set('goal-lbl-wealth', `of ${fmtGBP(target)}`);
 
