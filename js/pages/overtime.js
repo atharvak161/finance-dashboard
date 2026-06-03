@@ -382,6 +382,17 @@ function attachEvents() {
       summary.varianceGBP = round2(actual - p.pay.netWithOT);
       state.otMonthlySummary[month] = summary;
       await saveSec('fin_ot_monthly_summary', state.otMonthlySummary);
+
+      // Write confirmed month's saved amount back to India trip goal
+      // so the dashboard Goals tab and India trip gauge stay in sync
+      const expenses = p.monthExpenses || 0;
+      const indiaRedirect = p.indiaRedirect || 0;
+      const monthlySaved = round2(actual - expenses + indiaRedirect);
+      if (monthlySaved > 0 && state.goals?.indiaTrip) {
+        state.goals.indiaTrip.savedGBP = round2((state.goals.indiaTrip.savedGBP || 0) + monthlySaved);
+        await saveSec('fin_goals', state.goals);
+      }
+
       render();
     });
   });
