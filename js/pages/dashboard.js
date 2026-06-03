@@ -230,14 +230,32 @@ function renderOverview(host, st) {
   set('ov-val-emergency', fmtPct(emergency.pct)); set('ov-lbl-emergency', `${fmtGBP(emergency.savings)} of ${fmtGBP(emergency.target)}`);
   set('ov-val-india', fmtPct(india.pct));    set('ov-lbl-india', `${fmtGBP(indiaTotalSaved)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`);
 
-  // Net pay trend
+  // Net pay trend — use actual log or generate 6-month estimate from current income settings
   const ctxTrend = getCtx('ov-chart-trend');
-  if (ctxTrend && log.length) {
+  if (ctxTrend) {
+    let trendLabels, trendNet, trendSaved;
+    if (log.length) {
+      trendLabels = log.map(r => r.month);
+      trendNet    = log.map(r => r.netGBP || 0);
+      trendSaved  = log.map(r => r.savedGBP || 0);
+    } else {
+      // No log entries yet — generate estimated trend from current income/expense settings
+      const estimated = [];
+      const now = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const label = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        estimated.push({ month: label, net: pay.netWithOT, saved: Math.max(0, round2(pay.netWithOT - totalExp)) });
+      }
+      trendLabels = estimated.map(r => r.month);
+      trendNet    = estimated.map(r => r.net);
+      trendSaved  = estimated.map(r => r.saved);
+    }
     dashCharts['ov-chart-trend'] = new Chart(ctxTrend, {
       type:'line',
-      data:{ labels:log.map(r=>r.month), datasets:[
-        { label:'Net Income', data:log.map(r=>r.netGBP||0), borderColor:C.info, backgroundColor:C.info+'22', fill:true, tension:0.3, pointRadius:3, borderWidth:2 },
-        { label:'Saved', data:log.map(r=>r.savedGBP||0), borderColor:C.positive, backgroundColor:'transparent', tension:0.3, pointRadius:3, borderWidth:2 },
+      data:{ labels:trendLabels, datasets:[
+        { label:'Net Income', data:trendNet,   borderColor:C.info,     backgroundColor:C.info+'22',     fill:true,  tension:0.3, pointRadius:3, borderWidth:2 },
+        { label:'Saved',      data:trendSaved, borderColor:C.positive, backgroundColor:'transparent', fill:false, tension:0.3, pointRadius:3, borderWidth:2 },
       ]},
       options:{ ...base, plugins:{ ...base.plugins, legend:{ display:true, labels:{ color:C.tick, boxWidth:10, font:{size:11} } } },
         scales:{ ...base.scales, y:{ ...base.scales.y, ticks:{ ...base.scales.y.ticks, callback:v=>'£'+v } } } },
