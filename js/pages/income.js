@@ -8,6 +8,19 @@ const state = await initPage('income');
 
 let editMode = false;
 
+// MUST be declared before renderPage() is called — TDZ guard
+const DETAIL_ROWS = [
+  ['Base salary (£/yr)',      'baseSalaryGBP',          v => fmtGBP(v || 0)],
+  ['Avg overtime (£/mo)',     'avgOvertimeGrossGBP',    v => fmtGBP(v || 0)],
+  ['Hours/week',              'hoursPerWeek',           v => `${v ?? '—'}`],
+  ['Pension employee (%)',    'pensionEmployeeRate',    v => `${v ?? 0}%`],
+  ['Pension employer (%)',    'pensionEmployerRate',    v => `${v ?? 0}%`],
+  ['Tax code',                'taxCode',                v => `${v || '—'}`],
+  ['Tax-free allowance (£)',  'taxFreeAllowanceAnnual', v => fmtGBP(v || 0)],
+  ['Underpayment (£/mo)',     'underpaymentMonthlyGBP', v => fmtGBP(v || 0)],
+  ['Underpayment clears',     'underpaymentClearsDate', v => v || '—'],
+];
+
 renderPage();
 
 function renderPage() {
@@ -74,18 +87,6 @@ function renderEditSection() {
   </div>`;
 }
 
-const DETAIL_ROWS = [
-  ['Base salary (£/yr)',      'baseSalaryGBP',          v => fmtGBP(v || 0)],
-  ['Avg overtime (£/mo)',     'avgOvertimeGrossGBP',    v => fmtGBP(v || 0)],
-  ['Hours/week',              'hoursPerWeek',           v => `${v ?? '—'}`],
-  ['Pension employee (%)',    'pensionEmployeeRate',    v => `${v ?? 0}%`],
-  ['Pension employer (%)',    'pensionEmployerRate',    v => `${v ?? 0}%`],
-  ['Tax code',                'taxCode',                v => `${v || '—'}`],
-  ['Tax-free allowance (£)',  'taxFreeAllowanceAnnual', v => fmtGBP(v || 0)],
-  ['Underpayment (£/mo)',     'underpaymentMonthlyGBP', v => fmtGBP(v || 0)],
-  ['Underpayment clears',     'underpaymentClearsDate', v => v || '—'],
-];
-
 function renderReadOnlyDetails() {
   const inc = state.income || {};
   return `<div class="mt-16">
@@ -109,13 +110,26 @@ function iField(label, key, type = 'number') {
   </div>`;
 }
 
+function iPctField(label, key) {
+  const inc = state.income || {};
+  const val = inc[key];
+  return `<div class="form-group" style="margin-bottom:14px">
+    <label class="form-label">${label}</label>
+    <div style="display:flex;align-items:center;gap:6px">
+      <input type="number" class="form-input income-field" data-key="${key}"
+             value="${val ?? ''}" step="0.1" min="0" max="100" style="flex:1" />
+      <span style="color:var(--text-secondary);font-family:var(--font-mono);font-size:14px;padding:0 4px">%</span>
+    </div>
+  </div>`;
+}
+
 function renderEditForm() {
   return `<div class="grid-2">
     ${iField('Base salary (£/yr)',      'baseSalaryGBP')}
     ${iField('Avg overtime (£/mo)',     'avgOvertimeGrossGBP')}
     ${iField('Hours/week',              'hoursPerWeek')}
-    ${iField('Pension employee (%)',    'pensionEmployeeRate')}
-    ${iField('Pension employer (%)',    'pensionEmployerRate')}
+    ${iPctField('Pension employee',     'pensionEmployeeRate')}
+    ${iPctField('Pension employer',     'pensionEmployerRate')}
     ${iField('Tax code',                'taxCode', 'text')}
     ${iField('Tax-free allowance (£)',  'taxFreeAllowanceAnnual')}
     ${iField('Underpayment (£/mo)',     'underpaymentMonthlyGBP')}
