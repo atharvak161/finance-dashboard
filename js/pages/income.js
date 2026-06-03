@@ -47,7 +47,7 @@ function renderSummaryCards() {
   return `<div class="grid-4">
     ${card('Monthly net pay', fmtGBP(pay.netWithOT), 'After tax, NI &amp; pension')}
     ${card('Monthly OT gross', fmtGBP(inc.avgOvertimeGrossGBP || 0), 'Average overtime')}
-    ${card('Pension (employee)', fmtGBP(pay.pension), `${inc.pensionEmployeeRate || 0}% salary sacrifice`)}
+    ${card('Pension (employee)', fmtGBP(pay.pension), `${inc.pensionEmployeeRate || 0}% of gross pay`)}
     ${card('Tax this month', fmtGBP(pay.incomeTax), 'Income Tax deducted')}
   </div>`;
 }
