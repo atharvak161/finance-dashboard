@@ -1,125 +1,154 @@
 import { initPage, saveSec } from '../page-init.js';
-import { save }        from '../store.js';
-import {
-  calculateNetPay, applyScheduledChanges, totalExpenses,
-  calculateSurplus, fmtGBP, round2
-} from '../calc.js';
+import { calculateNetPay, fmtGBP } from '../calc.js';
 
-// Hoisted before top-level await — avoids TDZ errors when render() runs
-const C = { info:'#00bfff', teal:'#00e5ff', negative:'#ff1744', positive:'#00e676',
-            grid:'rgba(0,191,255,0.07)', tick:'#3d5473' };
-let _wChart = null;
+// Edit-only Income page. Charts now live on the dashboard.
+// Summary cards (read-only, computed from state) + an Edit/Save details panel.
 
 const state = await initPage('income');
-render(state);
 
-function render(st) {
-  const inc = st.income || {};
-  const pay = calculateNetPay(inc);
+let editMode = false;
 
-  // ── Fields (2-column grid) ─────────────────────────────────
-  document.getElementById('income-fields').innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
-      ${iField('Base salary (£/yr)', 'baseSalaryGBP', inc.baseSalaryGBP)}
-      ${iField('Avg overtime gross (£/mo)', 'avgOvertimeGrossGBP', inc.avgOvertimeGrossGBP)}
-      ${iField('Hours per week', 'hoursPerWeek', inc.hoursPerWeek)}
-      ${iField('Pension employee (%)', 'pensionEmployeeRate', inc.pensionEmployeeRate)}
-      ${iField('Pension employer (%)', 'pensionEmployerRate', inc.pensionEmployerRate)}
-      ${iField('Tax-free allowance (£/yr)', 'taxFreeAllowanceAnnual', inc.taxFreeAllowanceAnnual)}
-      ${iField('Underpayment deduction (£/mo)', 'underpaymentMonthlyGBP', inc.underpaymentMonthlyGBP)}
-      <div class="form-group">
-        <label class="form-label">Underpayment clears</label>
-        <input type="date" class="form-input income-field" data-key="underpaymentClearsDate"
-               value="${inc.underpaymentClearsDate||''}" />
+renderPage();
+
+function renderPage() {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="section-header">
+      <div>
+        <div class="section-title">Income</div>
+        <div class="section-subtitle">Salary, deductions &amp; take-home pay</div>
       </div>
+    </div>
+    ${renderSummaryCards()}
+    <div class="mt-20" data-section="income">
+      ${renderEditSection()}
     </div>`;
-  bindFields(st);
-
-  // ── Deductions waterfall ───────────────────────────────────
-  document.getElementById('income-deductions').innerHTML = `
-    <div class="stat-row"><span class="stat-label">Hourly rate</span><span class="stat-value mono">${fmtGBP(pay.hourlyRate,2)}/hr</span></div>
-    <div class="deduction-row"><span class="ded-label">Gross (base)</span><span class="ded-plus">${fmtGBP(pay.grossBase)}</span></div>
-    <div class="deduction-row"><span class="ded-label">Overtime</span><span class="ded-plus">+${fmtGBP(inc.avgOvertimeGrossGBP||0)}</span></div>
-    <div class="deduction-row"><span class="ded-label">Income Tax (${pay.grossWithOT > 0 ? (pay.incomeTax / pay.grossWithOT * 100).toFixed(1) + '%' : '—'})</span><span class="ded-minus">−${fmtGBP(pay.incomeTax)}</span></div>
-    <div class="deduction-row"><span class="ded-label">National Insurance (8%)</span><span class="ded-minus">−${fmtGBP(pay.ni)}</span></div>
-    <div class="deduction-row"><span class="ded-label">Pension (${inc.pensionEmployeeRate||0}%)</span><span class="ded-minus">−${fmtGBP(pay.pension)}</span></div>
-    <div class="deduction-row"><span class="ded-label">Tax underpayment (1034L)</span><span class="ded-minus">−${fmtGBP(pay.extraTax)}</span></div>
-    <div class="deduction-row" style="border-top:1px solid var(--border-medium);font-weight:600">
-      <span class="ded-label">Net Take-Home (base)</span><span class="ded-value mono">${fmtGBP(pay.netBase)}</span></div>
-    <div class="deduction-row" style="font-weight:600">
-      <span class="ded-label">Net Take-Home (w/ OT)</span><span class="ded-value mono">${fmtGBP(pay.netWithOT)}</span></div>
-    <div class="deduction-row"><span class="ded-label">Employer pension contrib</span><span class="ded-plus">+${fmtGBP(pay.employerPension)}</span></div>`;
-
-  // ── Scenarios table ────────────────────────────────────────
-  const effItems = applyScheduledChanges(st.expenses||{items:[],scheduledChanges:[]});
-  const exp      = totalExpenses(effItems);
-  document.getElementById('income-scenarios').innerHTML = `
-    <table class="data-table">
-      <thead><tr><th>Scenario</th><th class="td-right">Gross/yr</th><th class="td-right">Net/mo</th><th class="td-right">Surplus/mo</th></tr></thead>
-      <tbody>
-        ${[28000,40000,55000,65000].map(sal => {
-          const p = calculateNetPay({...inc, baseSalaryGBP:sal, avgOvertimeGrossGBP:0});
-          const s = calculateSurplus(p.netBase, exp);
-          const isCur = sal === (inc.baseSalaryGBP || 28000);
-          return `<tr class="${isCur?'highlight-row':''}">
-            <td>${isCur?'Current':('£'+sal.toLocaleString())}</td>
-            <td class="td-right mono">${fmtGBP(sal)}</td>
-            <td class="td-right mono">${fmtGBP(p.netBase)}</td>
-            <td class="td-right mono ${s>=0?'text-positive':'text-negative'}">${fmtGBP(s)}</td></tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
-
-  renderWaterfallChart(pay, inc);
+  attachEvents();
 }
 
-// ── Auto-save ─────────────────────────────────────────────────
+// ── Summary cards (read-only) ─────────────────────────────────
 
-function bindFields(st) {
-  document.querySelectorAll('.income-field').forEach(el => {
-    el.addEventListener('input', () => {
-      st.income[el.dataset.key] = el.type === 'number' ? (parseFloat(el.value)||0) : el.value;
-    });
-    el.addEventListener('change', async () => {
-      st.income[el.dataset.key] = el.type === 'number' ? (parseFloat(el.value)||0) : el.value;
-      await saveSec('fin_income', st.income);
-      render(st);
-    });
-  });
-}
-
-function iField(label, key, value) {
-  return `<div class="form-group">
-    <label class="form-label">${label}</label>
-    <input type="number" class="form-input income-field" data-key="${key}" value="${value||''}" step="any" />
+function renderSummaryCards() {
+  const inc = state.income || {};
+  const pay = calculateNetPay(inc);
+  const card = (label, value, sub) => `
+    <div class="metric-card">
+      <div class="label">${label}</div>
+      <div class="value mono">${value}</div>
+      ${sub ? `<div class="sub">${sub}</div>` : ''}
+    </div>`;
+  return `<div class="grid-4">
+    ${card('Monthly net pay', fmtGBP(pay.netWithOT), 'After tax, NI &amp; pension')}
+    ${card('Monthly OT gross', fmtGBP(inc.avgOvertimeGrossGBP || 0), 'Average overtime')}
+    ${card('Pension (employee)', fmtGBP(pay.pension), `${inc.pensionEmployeeRate || 0}% salary sacrifice`)}
+    ${card('Tax this month', fmtGBP(pay.incomeTax), 'Income Tax deducted')}
   </div>`;
 }
 
-// ── Chart ─────────────────────────────────────────────────────
+// ── Edit / read-only details section ──────────────────────────
 
-function renderWaterfallChart(pay, inc) {
-  const ctx = document.getElementById('chart-income-waterfall')?.getContext('2d');
-  if (!ctx) return;
-  if (_wChart) { _wChart.destroy(); }
-  const labels  = ['Gross','+ OT','− Tax','− NI','− Pension','− Underpay','Net'];
-  const offset  = [0, pay.grossBase, pay.grossWithOT, pay.grossWithOT-pay.incomeTax, pay.grossWithOT-pay.incomeTax-pay.ni, pay.grossWithOT-pay.incomeTax-pay.ni-pay.pension, 0];
-  const bars    = [pay.grossBase, inc.avgOvertimeGrossGBP||0, pay.incomeTax, pay.ni, pay.pension, pay.extraTax, pay.netWithOT];
-  const colors  = [C.info, C.teal, C.negative, C.negative, C.negative, C.negative, C.positive];
-  _wChart = new Chart(ctx, {
-    type:'bar',
-    data:{ labels, datasets:[
-      { data:offset, backgroundColor:'transparent', borderWidth:0 },
-      { data:bars, backgroundColor:colors, borderRadius:4, borderWidth:0,
-        animations:{ y:{ from:0, duration:600, easing:'easeOutQuart' } } },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      animation:{ duration:700, easing:'easeInOutQuart' },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'rgba(9,12,20,0.96)', borderColor:'rgba(0,191,255,0.25)', borderWidth:1,
-        filter:i=>i.datasetIndex===1, callbacks:{ label:c=>` £${c.raw.toFixed(0)}` } } },
-      scales:{
-        x:{ stacked:true, grid:{ color:C.grid, drawBorder:false }, ticks:{ color:C.tick, font:{size:11} } },
-        y:{ stacked:true, grid:{ color:C.grid, drawBorder:false }, ticks:{ color:C.tick, font:{size:11}, callback:v=>'£'+v.toFixed(0) } },
-      }
-    }
+function renderEditSection() {
+  if (!editMode) {
+    return `<div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="panel-title">Income Details</div>
+        <button id="edit-btn" class="btn btn-secondary btn-sm">✏️ Edit</button>
+      </div>
+      ${renderReadOnlyDetails()}
+    </div>`;
+  }
+  return `<div class="panel">
+    <div class="panel-title" style="margin-bottom:16px">Edit Income Details</div>
+    ${renderEditForm()}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button id="cancel-btn" class="btn btn-secondary btn-sm">Cancel</button>
+      <button id="save-btn" class="btn btn-primary btn-sm">Save</button>
+    </div>
+  </div>`;
+}
+
+const DETAIL_ROWS = [
+  ['Base salary (£/yr)',      'baseSalaryGBP',          v => fmtGBP(v || 0)],
+  ['Avg overtime (£/mo)',     'avgOvertimeGrossGBP',    v => fmtGBP(v || 0)],
+  ['Hours/week',              'hoursPerWeek',           v => `${v ?? '—'}`],
+  ['Pension employee (%)',    'pensionEmployeeRate',    v => `${v ?? 0}%`],
+  ['Pension employer (%)',    'pensionEmployerRate',    v => `${v ?? 0}%`],
+  ['Tax code',                'taxCode',                v => `${v || '—'}`],
+  ['Tax-free allowance (£)',  'taxFreeAllowanceAnnual', v => fmtGBP(v || 0)],
+  ['Underpayment (£/mo)',     'underpaymentMonthlyGBP', v => fmtGBP(v || 0)],
+  ['Underpayment clears',     'underpaymentClearsDate', v => v || '—'],
+];
+
+function renderReadOnlyDetails() {
+  const inc = state.income || {};
+  return `<div class="mt-16">
+    ${DETAIL_ROWS.map(([label, key, fmt]) => `
+      <div class="stat-row">
+        <span class="stat-label">${label}</span>
+        <span class="stat-value mono">${fmt(inc[key])}</span>
+      </div>`).join('')}
+  </div>`;
+}
+
+// ── Edit form fields (ported from settings-page renderIncome) ─
+
+function iField(label, key, type = 'number') {
+  const inc = state.income || {};
+  const val = inc[key];
+  return `<div class="form-group" style="margin-bottom:14px">
+    <label class="form-label">${label}</label>
+    <input type="${type}" class="form-input income-field" data-key="${key}"
+           value="${val ?? ''}" ${type === 'number' ? 'step="any"' : ''} />
+  </div>`;
+}
+
+function renderEditForm() {
+  return `<div class="grid-2">
+    ${iField('Base salary (£/yr)',      'baseSalaryGBP')}
+    ${iField('Avg overtime (£/mo)',     'avgOvertimeGrossGBP')}
+    ${iField('Hours/week',              'hoursPerWeek')}
+    ${iField('Pension employee (%)',    'pensionEmployeeRate')}
+    ${iField('Pension employer (%)',    'pensionEmployerRate')}
+    ${iField('Tax code',                'taxCode', 'text')}
+    ${iField('Tax-free allowance (£)',  'taxFreeAllowanceAnnual')}
+    ${iField('Underpayment (£/mo)',     'underpaymentMonthlyGBP')}
+    ${iField('Underpayment clears',     'underpaymentClearsDate', 'date')}
+  </div>`;
+}
+
+// ── Events ────────────────────────────────────────────────────
+
+function attachEvents() {
+  const editBtn = document.getElementById('edit-btn');
+  if (editBtn) editBtn.onclick = () => { editMode = true; renderPage(); };
+
+  const cancelBtn = document.getElementById('cancel-btn');
+  if (cancelBtn) cancelBtn.onclick = () => { editMode = false; renderPage(); };
+
+  const saveBtn = document.getElementById('save-btn');
+  if (saveBtn) saveBtn.onclick = onSave;
+
+  // Live-update the in-memory object as fields change so the summary preview
+  // is correct the moment Save re-renders.
+  document.querySelectorAll('.income-field').forEach(el => {
+    el.addEventListener('input', () => {
+      if (!state.income) state.income = {};
+      state.income[el.dataset.key] =
+        el.type === 'number' ? (parseFloat(el.value) || 0) : el.value;
+    });
   });
+}
+
+async function onSave() {
+  const btn = document.getElementById('save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  // Re-read every field (covers values changed without firing input).
+  if (!state.income) state.income = {};
+  document.querySelectorAll('.income-field').forEach(el => {
+    state.income[el.dataset.key] =
+      el.type === 'number' ? (parseFloat(el.value) || 0) : el.value;
+  });
+  await saveSec('fin_income', state.income);
+  editMode = false;
+  renderPage();
 }

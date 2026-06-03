@@ -1,254 +1,291 @@
 import { initPage, saveSec } from '../page-init.js';
-import { save }      from '../store.js';
 import {
-  indiaTripProgress, compoundGrowthProjection, emergencyRunwayMonths,
-  applyScheduledChanges, totalExpenses, calculateNetPay, calculateSurplus,
+  indiaTripProgress, emergencyFundProgress, wealthProgress,
+  calculateNetWorth,
   fmtGBP, fmtPct, round2
 } from '../calc.js';
-
-// Hoisted before top-level await
-const C = { info:'#00bfff', positive:'#00e676', warning:'#ff9100', negative:'#ff1744', grid:'rgba(0,191,255,0.07)', tick:'#3d5473' };
-const charts = {};
 
 const state = await initPage('goals');
 render(state);
 
+// ── Main render ───────────────────────────────────────────────
+
 function render(st) {
+  renderSummaryCards(st);
+  renderEditPanel(st);
+}
+
+// ── Summary cards ─────────────────────────────────────────────
+
+function renderSummaryCards(st) {
   const goals = st.goals || {};
   const trip  = goals.indiaTrip || {};
-  const log   = st.indiaLog || [];
-  const prog  = indiaTripProgress(goals);
+  const inv   = st.investments  || { cashAccounts: [], pensions: [], ulips: [] };
+  const dbt   = st.debts        || { sbi: {} };
+  const rate  = st.settings?.inrGbpRate || 83;
 
-  // ── India trip fields (2-col grid) ─────────────────────────
-  document.getElementById('india-fields').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      ${indiaField('Target (£)', 'targetGBP', trip.targetGBP)}
-      ${indiaField('Saved so far (£)', 'savedGBP', trip.savedGBP)}
-      <div class="form-group">
-        <label class="form-label">Deadline</label>
-        <input type="date" class="form-input india-field" data-key="deadline" value="${trip.deadline||''}" />
+  const efProg   = emergencyFundProgress(inv, goals);
+  const tripProg = indiaTripProgress(goals);
+  const nw       = calculateNetWorth(inv, dbt, rate);
+  const wTarget  = goals.wealthTargetGBP || 0;
+
+  // Emergency fund card
+  const efColor = efProg.pct >= 100 ? 'positive' : efProg.pct >= 50 ? 'warning' : 'negative';
+
+  // India trip countdown
+  const deadline    = trip.deadline ? new Date(trip.deadline) : null;
+  const daysLeft    = deadline ? Math.max(0, Math.round((deadline - new Date()) / 86400000)) : null;
+  const deadlineStr = deadline ? deadline.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+  // Wealth card
+  const wPct    = wTarget > 0 ? Math.min(100, round2((nw.netWorth / wTarget) * 100)) : 0;
+  const wColor  = wPct >= 100 ? 'positive' : wPct >= 40 ? 'info' : 'warning';
+
+  document.getElementById('goals-summary-cards').innerHTML = `
+    <!-- Emergency fund -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Emergency Fund</span></div>
+      <div class="stat-row">
+        <span class="stat-label">Saved</span>
+        <span class="stat-value mono text-${efColor}">${fmtGBP(efProg.savings)}</span>
       </div>
+      <div class="stat-row">
+        <span class="stat-label">Target</span>
+        <span class="stat-value mono">${fmtGBP(efProg.target)}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Remaining</span>
+        <span class="stat-value mono ${efProg.remaining > 0 ? 'text-warning' : 'text-positive'}">${fmtGBP(efProg.remaining)}</span>
+      </div>
+      <div style="margin-top:14px;background:var(--border-weak);border-radius:4px;height:6px;overflow:hidden">
+        <div style="width:${efProg.pct}%;height:100%;background:var(--color-${efColor});border-radius:4px;transition:width 0.6s ease"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;text-align:right">${fmtPct(efProg.pct)} of target</div>
     </div>
-    <div class="stat-row mt-12"><span class="stat-label">Remaining</span><span class="stat-value mono text-warning">${fmtGBP(prog.remaining)}</span></div>
-    <div class="stat-row"><span class="stat-label">Days left</span><span class="stat-value mono">${prog.daysLeft} days</span></div>
-    <div class="stat-row"><span class="stat-label">Months left</span><span class="stat-value mono">${prog.monthsLeft.toFixed(1)} months</span></div>
-    ${prog.remaining>0&&prog.monthsLeft>0?`<div class="stat-row"><span class="stat-label">Needed/mo</span><span class="stat-value mono text-info">${fmtGBP(round2(prog.remaining/prog.monthsLeft))}</span></div>`:''}`;
 
-  // India gauge
-  const gaugeVal = document.getElementById('india-gauge-val');
-  const gaugeLbl = document.getElementById('india-gauge-lbl');
-  if (gaugeVal) gaugeVal.textContent = fmtPct(prog.pct);
-  if (gaugeLbl) gaugeLbl.textContent = `${fmtGBP(trip.savedGBP||0)} of ${fmtGBP(trip.targetGBP||3000)}`;
+    <!-- India trip -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">India Trip</span></div>
+      <div class="stat-row">
+        <span class="stat-label">Saved</span>
+        <span class="stat-value mono text-info">${fmtGBP(trip.savedGBP || 0)}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Target</span>
+        <span class="stat-value mono">${fmtGBP(trip.targetGBP || 3000)}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Remaining</span>
+        <span class="stat-value mono ${tripProg.remaining > 0 ? 'text-warning' : 'text-positive'}">${fmtGBP(tripProg.remaining)}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Deadline</span>
+        <span class="stat-value mono">${deadlineStr}</span>
+      </div>
+      ${daysLeft !== null ? `<div class="stat-row">
+        <span class="stat-label">Days left</span>
+        <span class="stat-value mono ${daysLeft < 90 ? 'text-warning' : ''}">${daysLeft} days</span>
+      </div>` : ''}
+      <div style="margin-top:14px;background:var(--border-weak);border-radius:4px;height:6px;overflow:hidden">
+        <div style="width:${tripProg.pct}%;height:100%;background:var(--color-info);border-radius:4px;transition:width 0.6s ease"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;text-align:right">${fmtPct(tripProg.pct)} of ${fmtGBP(trip.targetGBP || 3000)}</div>
+    </div>`;
 
-  bindIndiaFields(st);
-
-  // ── Breakdown table ───────────────────────────────────────
-  const breakdown = trip.breakdown || [];
-  document.getElementById('india-breakdown-table').innerHTML = `
-    <table class="data-table">
-      <thead><tr><th>Item</th><th>Currency</th><th class="td-right">Amount (₹)</th><th class="td-right">Amount (£)</th><th>Status</th></tr></thead>
-      <tbody>
-        ${breakdown.map(b=>`<tr>
-          <td>${b.item}</td><td>${b.currency}</td>
-          <td class="td-right mono">${b.amountINR>0?'₹'+b.amountINR.toLocaleString('en-IN'):'—'}</td>
-          <td class="td-right mono">${fmtGBP(b.amountGBP)}</td>
-          <td><span class="badge ${b.paid?'badge-paid':'badge-pending'}">${b.paid?'Paid':'Pending'}</span></td>
-        </tr>`).join('')}
-        <tr class="total-row"><td colspan="3"><strong>Total</strong></td><td class="td-right mono"><strong>${fmtGBP(breakdown.reduce((s,b)=>s+b.amountGBP,0))}</strong></td><td></td></tr>
-      </tbody>
-    </table>`;
-
-  // ── Log table ─────────────────────────────────────────────
-  document.getElementById('india-log-table').innerHTML = log.length===0
-    ? '<p class="label-muted" style="padding:12px">No entries yet. Click + Add month to log savings.</p>'
-    : `<table class="data-table">
-      <thead><tr><th>Month</th><th class="td-right">Planned (£)</th><th class="td-right">Actual (£)</th><th class="td-right">Running Total</th><th>Note</th><th></th></tr></thead>
-      <tbody>
-        ${log.reduce((acc,r,i)=>{
-          const running=round2(log.slice(0,i+1).reduce((s,x)=>s+(x.actualGBP||0),0));
-          return acc+`<tr>
-            <td class="mono">${r.month}</td>
-            <td class="td-right mono">${fmtGBP(r.plannedGBP||0)}</td>
-            <td class="td-right mono ${(r.actualGBP||0)>=(r.plannedGBP||0)?'text-positive':'text-warning'}">${fmtGBP(r.actualGBP||0)}</td>
-            <td class="td-right mono">${fmtGBP(running)}</td>
-            <td style="font-size:12px;color:var(--text-secondary)">${r.note||''}</td>
-            <td><button class="btn-icon danger india-log-delete" data-idx="${i}">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-            </button></td>
-          </tr>`;
-        },'')}
-      </tbody>
-    </table>`;
-
-  document.querySelectorAll('.india-log-delete').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      st.indiaLog.splice(parseInt(btn.dataset.idx), 1);
-      await save('fin_india_log', st.indiaLog);
-      render(st);
-    });
-  });
-
-  document.getElementById('add-india-log-btn').onclick = async () => {
-    const month   = prompt('Month (YYYY-MM):', new Date().toISOString().slice(0,7));
-    if (!month) return;
-    const planned = parseFloat(prompt('Planned saving (£):', '0')||'0');
-    const actual  = parseFloat(prompt('Actual saved (£):',   '0')||'0');
-    const note    = prompt('Note (optional):', '') || '';
-    st.indiaLog.push({ month, plannedGBP:planned, actualGBP:actual, note });
-    await save('fin_india_log', st.indiaLog);
-    render(st);
-  };
-
-  renderCharts(st, log, prog);
-  renderEmergencyRunwayCard(st);
-  renderCompoundGrowthChart(st);
-}
-
-function indiaField(label, key, value) {
-  return `<div class="form-group">
-    <label class="form-label">${label}</label>
-    <input type="number" class="form-input india-field" data-key="${key}" value="${value||''}" step="any" />
-  </div>`;
-}
-
-function bindIndiaFields(st) {
-  document.querySelectorAll('.india-field').forEach(el => {
-    el.addEventListener('input', () => {
-      if (!st.goals.indiaTrip) st.goals.indiaTrip = {};
-      const k = el.dataset.key;
-      st.goals.indiaTrip[k] = el.type==='number' ? (parseFloat(el.value)||0) : el.value;
-    });
-    el.addEventListener('change', async () => {
-      if (!st.goals.indiaTrip) st.goals.indiaTrip = {};
-      const k = el.dataset.key;
-      st.goals.indiaTrip[k] = el.type==='number' ? (parseFloat(el.value)||0) : el.value;
-      await saveSec('fin_goals', st.goals);
-      render(st);
-    });
-  });
-}
-
-// ── Emergency Fund Runway ─────────────────────────────────────
-
-function renderEmergencyRunwayCard(st) {
-  const el = document.getElementById('emergency-runway-card');
-  if (!el) return;
-  const inv  = st.investments || { cashAccounts: [] };
-  const cash = inv.cashAccounts.reduce((s, a) => s + (a.balanceGBP || 0), 0);
-  const eff  = applyScheduledChanges(st.expenses || { items: [], scheduledChanges: [] });
-  const exp  = totalExpenses(eff);
-  const months = emergencyRunwayMonths(cash, exp);
-  const color  = months >= 6 ? 'positive' : months >= 3 ? 'warning' : months >= 1 ? 'warning' : 'negative';
-  const cls    = `text-${color}`;
-  const msg    = months >= 6 ? 'Excellent coverage' : months >= 3 ? 'Building up' : months >= 1 ? 'Low coverage' : 'Critical — less than 1 month';
-  el.innerHTML = `
-    <div class="metric-card" style="background:var(--bg-panel);border:1px solid var(--border-color);border-radius:8px;padding:20px 24px;display:flex;align-items:center;gap:24px;margin-bottom:16px">
-      <div>
-        <div class="label" style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">Emergency Fund Runway</div>
-        <div class="value ${cls}" style="font-size:2.4rem;font-weight:700;font-family:var(--font-mono)">${months.toFixed(1)} months</div>
-        <div class="sub" style="font-size:12px;color:var(--text-muted);margin-top:4px">${msg} · £${Math.round(cash).toLocaleString()} cash ÷ £${Math.round(exp).toLocaleString()}/mo expenses</div>
+  document.getElementById('goals-wealth-card').innerHTML = `
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Wealth Target</span></div>
+      <div style="display:flex;gap:32px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">Current net worth</div>
+          <div class="stat-value mono text-${nw.netWorth >= 0 ? 'positive' : 'negative'}" style="font-size:1.8rem">${fmtGBP(nw.netWorth)}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">Wealth target</div>
+          <div class="stat-value mono" style="font-size:1.8rem">${fmtGBP(wTarget)}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">Progress</div>
+          <div class="stat-value mono text-${wColor}" style="font-size:1.8rem">${fmtPct(wPct)}</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;background:var(--border-weak);border-radius:4px;height:8px;overflow:hidden">
+        <div style="width:${wPct}%;height:100%;background:var(--color-${wColor});border-radius:4px;transition:width 0.6s ease"></div>
       </div>
     </div>`;
 }
 
-// ── Compound Growth Projector ─────────────────────────────────
+// ── Edit panel ────────────────────────────────────────────────
 
-function renderCompoundGrowthChart(st) {
-  const cp = st.settings?.chartParams?.compoundGrowth || {};
-  const monthlyAmount = cp.monthlyAmount ?? 217;
-  const ratePercent   = cp.ratePercent   ?? 10;
-  const years         = cp.years         ?? 25;
+let _editing = false;
 
-  // Final value metric card
-  const pts      = compoundGrowthProjection(monthlyAmount, ratePercent, years);
-  const finalVal = pts[pts.length - 1]?.value || 0;
-  const card     = document.getElementById('compound-growth-card');
-  if (card) {
-    card.innerHTML = `
-      <div style="background:var(--bg-panel);border:1px solid var(--border-color);border-radius:8px;padding:16px 20px;display:inline-flex;gap:32px;align-items:center;margin-bottom:8px">
-        <div>
-          <div style="font-size:11px;color:var(--text-secondary)">Final value after ${years} years</div>
-          <div style="font-size:2rem;font-weight:700;font-family:var(--font-mono);color:var(--color-positive)">£${Math.round(finalVal).toLocaleString()}</div>
-        </div>
-        <div style="font-size:12px;color:var(--text-muted)">
-          £${monthlyAmount}/mo × ${years}yr @ ${ratePercent}%/yr
-        </div>
-      </div>`;
+function renderEditPanel(st) {
+  const body = document.getElementById('goals-edit-body');
+  const btn  = document.getElementById('goals-edit-btn');
+
+  if (!_editing) {
+    body.innerHTML = '';
+    btn.textContent = '✎ Edit Goals';
+    btn.onclick = () => { _editing = true; renderEditPanel(st); };
+    return;
   }
 
-  // Controls
-  const ctrl = document.getElementById('compound-controls');
-  if (ctrl) {
-    ctrl.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:10px;padding-top:8px">
-        ${cgField('Monthly amount (£)', 'monthlyAmount', monthlyAmount, st)}
-        ${cgField('Annual rate (%)', 'ratePercent', ratePercent, st)}
-        ${cgField('Years', 'years', years, st)}
-      </div>`;
-    ctrl.querySelectorAll('.cg-field').forEach(el => {
-      el.addEventListener('input', () => {
-        if (!st.settings.chartParams) st.settings.chartParams = {};
-        if (!st.settings.chartParams.compoundGrowth) st.settings.chartParams.compoundGrowth = {};
-        st.settings.chartParams.compoundGrowth[el.dataset.key] = parseFloat(el.value) || 0;
-        renderCompoundGrowthChart(st);
-      });
-      el.addEventListener('change', async () => {
-        if (!st.settings.chartParams) st.settings.chartParams = {};
-        if (!st.settings.chartParams.compoundGrowth) st.settings.chartParams.compoundGrowth = {};
-        st.settings.chartParams.compoundGrowth[el.dataset.key] = parseFloat(el.value) || 0;
-        await save('fin_settings', st.settings);
-      });
-    });
-  }
+  const goals = st.goals || {};
+  const trip  = goals.indiaTrip  || {};
+  const bd    = trip.breakdown   || [];
 
-  if (charts['chart-compound-growth']) { charts['chart-compound-growth'].destroy(); delete charts['chart-compound-growth']; }
-  const ctx = document.getElementById('chart-compound-growth')?.getContext('2d');
-  if (!ctx) return;
-  charts['chart-compound-growth'] = new Chart(ctx, {
-    type: 'line',
-    data: { labels: pts.map(p => `Yr ${p.year}`), datasets: [{
-      label: 'Projected Value',
-      data: pts.map(p => p.value),
-      borderColor: C.positive,
-      backgroundColor: C.positive + '22',
-      fill: true,
-      tension: 0.4,
-      pointRadius: 0,
-      borderWidth: 2,
-    }]},
-    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 600, easing: 'easeInOutQuart' },
-      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#252830', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#d9dde2', bodyColor: '#8e9099', padding: 10,
-        callbacks: { label: item => ` £${Math.round(item.raw).toLocaleString()}` } } },
-      scales: {
-        x: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, maxTicksLimit: 10 } },
-        y: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, callback: v => '£' + Math.round(v / 1000) + 'k' } },
-      },
-    },
+  btn.textContent = '';
+  btn.onclick = null;
+
+  body.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px">
+      <div class="form-group">
+        <label class="form-label">Emergency fund target (£)</label>
+        <input type="number" class="form-input" id="ef-edit-target" value="${goals.emergencyFundTargetGBP || ''}" step="any" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Wealth target (£)</label>
+        <input type="number" class="form-input" id="ef-edit-wealth" value="${goals.wealthTargetGBP || ''}" step="any" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target retirement age</label>
+        <input type="number" class="form-input" id="ef-edit-retage" value="${goals.targetAge || ''}" step="1" />
+      </div>
+    </div>
+
+    <div style="margin-top:20px;margin-bottom:12px;font-size:12.5px;color:var(--text-secondary);font-weight:500">India Trip</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="form-group">
+        <label class="form-label">Target (£)</label>
+        <input type="number" class="form-input" id="trip-edit-target" value="${trip.targetGBP || ''}" step="any" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Saved (£)</label>
+        <input type="number" class="form-input" id="trip-edit-saved" value="${trip.savedGBP || ''}" step="any" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Deadline</label>
+        <input type="date" class="form-input" id="trip-edit-deadline" value="${trip.deadline || ''}" />
+      </div>
+      <div class="form-group" style="justify-content:flex-end;padding-bottom:2px">
+        <label class="form-label">Flights paid?</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px">
+          <input type="checkbox" id="trip-edit-flights" ${trip.flightsPaid ? 'checked' : ''} style="width:auto">
+          <span class="label-muted">Yes, flights are paid</span>
+        </label>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;margin-bottom:10px;font-size:12.5px;color:var(--text-secondary);font-weight:500">Budget Breakdown</div>
+    <table class="data-table" style="margin-bottom:10px">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Currency</th>
+          <th>Amount</th>
+          <th>Paid?</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="bd-rows">
+        ${bd.map((b, i) => breakdownRow(b, i)).join('')}
+      </tbody>
+    </table>
+    <button class="btn btn-secondary btn-sm" id="bd-add-btn">+ Add item</button>
+
+    <div style="margin-top:24px;display:flex;justify-content:flex-end;gap:10px">
+      <button class="btn btn-secondary" id="goals-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="goals-save-btn">Save</button>
+    </div>`;
+
+  // Bind breakdown row delete buttons
+  bindBreakdownDelete(st);
+
+  // Add item button
+  document.getElementById('bd-add-btn').onclick = () => {
+    if (!st.goals.indiaTrip) st.goals.indiaTrip = {};
+    if (!st.goals.indiaTrip.breakdown) st.goals.indiaTrip.breakdown = [];
+    st.goals.indiaTrip.breakdown.push({ item: '', currency: 'GBP', amountGBP: 0, paid: false });
+    renderEditPanel(st);
+  };
+
+  // Cancel
+  document.getElementById('goals-cancel-btn').onclick = () => {
+    _editing = false;
+    renderEditPanel(st);
+  };
+
+  // Save
+  document.getElementById('goals-save-btn').onclick = async () => {
+    const saveBtn = document.getElementById('goals-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    // Read top-level fields
+    if (!st.goals) st.goals = {};
+    if (!st.goals.indiaTrip) st.goals.indiaTrip = {};
+
+    st.goals.emergencyFundTargetGBP = parseFloat(document.getElementById('ef-edit-target').value) || 0;
+    st.goals.wealthTargetGBP        = parseFloat(document.getElementById('ef-edit-wealth').value)  || 0;
+    st.goals.targetAge              = parseInt(document.getElementById('ef-edit-retage').value, 10) || 0;
+
+    st.goals.indiaTrip.targetGBP   = parseFloat(document.getElementById('trip-edit-target').value)   || 0;
+    st.goals.indiaTrip.savedGBP    = parseFloat(document.getElementById('trip-edit-saved').value)    || 0;
+    st.goals.indiaTrip.deadline    = document.getElementById('trip-edit-deadline').value;
+    st.goals.indiaTrip.flightsPaid = document.getElementById('trip-edit-flights').checked;
+
+    // Read breakdown rows
+    const rows = document.querySelectorAll('.bd-row');
+    st.goals.indiaTrip.breakdown = Array.from(rows).map(row => ({
+      item:      row.querySelector('.bd-item').value,
+      currency:  row.querySelector('.bd-currency').value,
+      amountGBP: parseFloat(row.querySelector('.bd-amount').value) || 0,
+      paid:      row.querySelector('.bd-paid').checked,
+    }));
+
+    try {
+      await saveSec('fin_goals', st.goals);
+      saveBtn.textContent = '✓ Saved';
+      setTimeout(() => {
+        _editing = false;
+        render(st);
+      }, 1200);
+    } catch (err) {
+      console.error('Goals save failed:', err);
+      saveBtn.textContent = '✕ Error';
+      saveBtn.disabled = false;
+    }
+  };
+}
+
+function breakdownRow(b, i) {
+  return `<tr class="bd-row" data-idx="${i}">
+    <td><input type="text"   class="form-input bd-item"     value="${escHtml(b.item || '')}" placeholder="Item name" style="padding:4px 8px;font-size:12px" /></td>
+    <td><input type="text"   class="form-input bd-currency" value="${escHtml(b.currency || 'GBP')}" style="padding:4px 8px;font-size:12px;width:80px" /></td>
+    <td><input type="number" class="form-input bd-amount"   value="${b.amountGBP || ''}" step="any" style="padding:4px 8px;font-size:12px" /></td>
+    <td style="text-align:center"><input type="checkbox" class="bd-paid" ${b.paid ? 'checked' : ''} style="width:auto" /></td>
+    <td><button class="btn-icon danger bd-delete" data-idx="${i}" title="Remove">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+    </button></td>
+  </tr>`;
+}
+
+function bindBreakdownDelete(st) {
+  document.querySelectorAll('.bd-delete').forEach(btn => {
+    btn.onclick = () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      if (!st.goals.indiaTrip) st.goals.indiaTrip = {};
+      if (!st.goals.indiaTrip.breakdown) st.goals.indiaTrip.breakdown = [];
+      st.goals.indiaTrip.breakdown.splice(idx, 1);
+      renderEditPanel(st);
+    };
   });
 }
 
-function cgField(label, key, value) {
-  return `<div class="form-group" style="margin-bottom:0">
-    <label class="form-label" style="font-size:11px">${label}</label>
-    <input type="number" class="form-input cg-field" data-key="${key}" value="${value}" step="any" style="padding:4px 8px;font-size:12px" />
-  </div>`;
-}
-
-// ── Charts ─────────────────────────────────────────────────────
-
-function getCtx(id) { if(charts[id]){charts[id].destroy();delete charts[id];}return document.getElementById(id)?.getContext('2d')||null; }
-
-function renderCharts(st, log, prog) {
-  // India gauge
-  const ctx0=getCtx('chart-india-gauge');if(ctx0){
-    const v=Math.max(0,Math.min(100,prog.pct));const col=v>=80?C.positive:C.warning;
-    charts['chart-india-gauge']=new Chart(ctx0,{type:'doughnut',data:{datasets:[{data:[v,100-v,100],backgroundColor:[col,'#252830','transparent'],borderWidth:0,hoverOffset:0}]},options:{responsive:true,maintainAspectRatio:false,rotation:-90,circumference:180,cutout:'72%',animation:{animateRotate:true,duration:1000,easing:'easeInOutCubic'},plugins:{legend:{display:false},tooltip:{enabled:false}}}});
-  }
-  if (!log.length) return;
-  const labels=log.map(r=>r.month);
-  const planned=log.map((_,i)=>round2(log.slice(0,i+1).reduce((s,r)=>s+(r.plannedGBP||0),0)));
-  const actual=log.map((_,i)=>round2(log.slice(0,i+1).reduce((s,r)=>s+(r.actualGBP||0),0)));
-  const base_={responsive:true,maintainAspectRatio:false,animation:{duration:700,easing:'easeInOutQuart'},plugins:{legend:{display:true,labels:{color:C.tick,boxWidth:10,font:{size:11}}},tooltip:{backgroundColor:'rgba(9,12,20,0.96)',borderColor:'rgba(0,191,255,0.25)',borderWidth:1,titleColor:'#00bfff',bodyColor:'#7a96b3',padding:10}},scales:{x:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11}}},y:{grid:{color:C.grid},ticks:{color:C.tick,font:{size:11},callback:v=>'£'+v.toFixed(0)}}}};
-  const ctxLn=getCtx('chart-india-line');if(ctxLn)charts['chart-india-line']=new Chart(ctxLn,{type:'line',data:{labels,datasets:[{label:'Planned',data:planned,borderColor:C.info,backgroundColor:'transparent',tension:0.3,pointRadius:3,borderWidth:2,borderDash:[4,4]},{label:'Actual',data:actual,borderColor:C.positive,backgroundColor:C.positive+'22',fill:true,tension:0.3,pointRadius:3,borderWidth:2}]},options:base_});
-  const ctxBr=getCtx('chart-india-bar');if(ctxBr)charts['chart-india-bar']=new Chart(ctxBr,{type:'bar',data:{labels,datasets:[{label:'Planned (£)',data:log.map(r=>r.plannedGBP||0),backgroundColor:C.info+'cc',borderRadius:4,animations:{y:{from:0,duration:600,easing:'easeOutQuart'}}},{label:'Actual (£)',data:log.map(r=>r.actualGBP||0),backgroundColor:C.positive+'cc',borderRadius:4}]},options:{...base_,scales:{...base_.scales,y:{...base_.scales.y,ticks:{...base_.scales.y.ticks,callback:v=>'£'+v.toFixed(0)}}}}});
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }

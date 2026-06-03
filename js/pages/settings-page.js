@@ -6,7 +6,7 @@ const state = await initPage('settings');
 
 // ── Tab management ────────────────────────────────────────────
 
-let _currentTab = 'profile';
+let _currentTab = 'display';
 
 document.querySelectorAll('#settings-tabs .tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -56,7 +56,7 @@ function registerSave(key, obj) {
 }
 
 // Initial render — runs after all declarations above are initialised.
-renderTab('profile');
+renderTab('display');
 
 // Save handler shared by every tab's Save button.
 async function saveCurrentTab(btn) {
@@ -178,14 +178,6 @@ function renderTab(tab) {
   _currentStoreKey = null;
   const content = document.getElementById('settings-content');
   switch(tab) {
-    case 'profile':     renderProfile(content);     break;
-    case 'income':      renderIncome(content);      break;
-    case 'expenses':    renderExpenses(content);    break;
-    case 'debts':       renderDebts(content);       break;
-    case 'investments': renderInvestments(content); break;
-    case 'goals':       renderGoals(content);       break;
-    case 'projections': renderProjections(content); break;
-    case 'tax':         renderTaxSettings(content); break;
     case 'display':     renderDisplay(content);     break;
     case 'data':        renderData(content);        break;
     case 'charts':      renderChartParams(content); break;

@@ -20,47 +20,24 @@
       <div class="section-header" data-section="profile">
         <div>
           <div class="section-title">Overview</div>
-          <div class="section-subtitle">Your financial snapshot</div>
+          <div class="section-subtitle">Your full financial picture, by section</div>
         </div>
       </div>
 
-      <div class="grid-4" id="overview-cards" data-section="income"></div>
-
-      <div id="emergency-runway-kpi" style="margin-top:12px"></div>
-
-      <div class="grid-2 mt-20">
-        <div class="panel" data-section="expenses">
-          <div class="panel-header"><span class="panel-title">Expense Breakdown</span></div>
-          <div class="chart-wrap chart-h-260"><canvas id="chart-expense-doughnut"></canvas></div>
-          <div class="chart-legend" id="legend-expense-doughnut"></div>
-        </div>
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">Monthly Summary</span></div>
-          <div class="chart-wrap chart-h-260"><canvas id="chart-monthly-bar"></canvas></div>
-        </div>
+      <div class="dash-tabs" id="dash-tabs">
+        <button class="dash-tab active" data-tab="overview">Overview</button>
+        <button class="dash-tab" data-tab="income">Income</button>
+        <button class="dash-tab" data-tab="expenses">Expenses</button>
+        <button class="dash-tab" data-tab="debts">Debts</button>
+        <button class="dash-tab" data-tab="assets">Assets</button>
+        <button class="dash-tab" data-tab="networth">Net Worth</button>
+        <button class="dash-tab" data-tab="goals">Goals</button>
+        <button class="dash-tab" data-tab="ot">OT Tracker</button>
+        <button class="dash-tab" data-tab="tax">Tax</button>
+        <button class="dash-tab" data-tab="analytics">Analytics</button>
       </div>
 
-      <div class="grid-3 mt-20">
-        <div class="panel gauge-wrap" id="gauge-debt" data-section="debts">
-          <div class="panel-title" style="margin-bottom:8px">Debt Clearance</div>
-          <div class="gauge-chart-container"><canvas id="chart-gauge-debt"></canvas></div>
-          <div class="gauge-value" id="gauge-val-debt">0%</div>
-          <div class="gauge-label" id="gauge-lbl-debt">progress toward £0</div>
-          <div class="gauge-phase text-warning" id="gauge-phase-debt">Clearing debt</div>
-        </div>
-        <div class="panel gauge-wrap" id="gauge-emergency" data-section="investments">
-          <div class="panel-title" style="margin-bottom:8px">Emergency Fund</div>
-          <div class="gauge-chart-container"><canvas id="chart-gauge-emergency"></canvas></div>
-          <div class="gauge-value" id="gauge-val-emergency">0%</div>
-          <div class="gauge-label" id="gauge-lbl-emergency">of £3,000</div>
-        </div>
-        <div class="panel gauge-wrap" id="gauge-india" data-section="goals">
-          <div class="panel-title" style="margin-bottom:8px">India Trip</div>
-          <div class="gauge-chart-container"><canvas id="chart-gauge-india"></canvas></div>
-          <div class="gauge-value" id="gauge-val-india">0%</div>
-          <div class="gauge-label" id="gauge-lbl-india">of £3,000</div>
-        </div>
-      </div>
+      <div id="dash-content"></div>
 
     </div>
   </div>

@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -20,25 +19,19 @@
       <div class="section-header">
         <div>
           <div class="section-title">Assets &amp; Investments</div>
-          <div class="section-subtitle">Pension, savings &amp; insurance-linked plans</div>
+          <div class="section-subtitle">Cash, pension, ULIPs, UK wrappers &amp; India instruments — view &amp; edit</div>
         </div>
       </div>
 
-      <div class="grid-2">
-        <div class="panel" id="pension-card" data-section="investments"></div>
-        <div class="panel" id="cash-card"></div>
+      <div class="tabs" id="assets-tabs" data-section="investments">
+        <button class="tab-btn active" data-tab="cash">Cash Accounts</button>
+        <button class="tab-btn" data-tab="pension">Pension</button>
+        <button class="tab-btn" data-tab="ulips">ULIPs</button>
+        <button class="tab-btn" data-tab="uk">UK Wrappers</button>
+        <button class="tab-btn" data-tab="india">India</button>
       </div>
 
-      <div id="ulip-section" class="mt-20"></div>
-
-      <div id="uk-wrappers-section" class="mt-20"></div>
-
-      <div id="india-investments-section" class="mt-20"></div>
-
-      <div class="panel mt-20">
-        <div class="panel-header"><span class="panel-title">Combined ULIP Projection (Expected Rate)</span></div>
-        <div class="chart-wrap chart-h-300"><canvas id="chart-ulip-combined"></canvas></div>
-      </div>
+      <div id="assets-content"></div>
 
     </div>
   </div>
