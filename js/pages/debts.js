@@ -53,7 +53,7 @@ function renderFields(st, sbi) {
     // Read-only view
     wrap.innerHTML = `
       <div class="stat-row"><span class="stat-label">Outstanding balance (₹)</span><span class="stat-value mono">${fmtINR(sbi.outstandingINR||0)}</span></div>
-      <div class="stat-row"><span class="stat-label">Original principal (₹)</span><span class="stat-value mono">${fmtINR(sbi.principalINR||0)}</span></div>
+      <div class="stat-row"><span class="stat-label">Original principal (₹)</span><span class="stat-value mono">${fmtINR(sbi.originalPrincipalINR||0)}</span></div>
       <div class="stat-row"><span class="stat-label">Interest rate (%)</span><span class="stat-value mono">${sbi.ratePercent||0}%</span></div>
       <div class="stat-row"><span class="stat-label">Monthly EMI (₹)</span><span class="stat-value mono">${fmtINR(sbi.emiINR||0)}</span></div>
       <div class="stat-row"><span class="stat-label">Extra monthly (₹)</span><span class="stat-value mono">${fmtINR(sbi.extraMonthlyINR||0)}</span></div>
@@ -69,7 +69,7 @@ function renderFields(st, sbi) {
   wrap.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
       ${dField('Outstanding balance (₹)', 'outstandingINR', draft.outstandingINR)}
-      ${dField('Original principal (₹)', 'principalINR', draft.principalINR)}
+      ${dField('Original principal (₹)', 'originalPrincipalINR', draft.originalPrincipalINR)}
       ${dField('Interest rate (%)', 'ratePercent', draft.ratePercent)}
       ${dField('Monthly EMI (₹)', 'emiINR', draft.emiINR)}
       ${dField('Extra monthly (₹)', 'extraMonthlyINR', draft.extraMonthlyINR)}
