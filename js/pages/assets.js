@@ -171,7 +171,11 @@ function renderULIPs(rate) {
     const editing = _editing === 'ulip-' + i;
 
     if (editing) {
+      // Persist the draft in a module-level map so the Save handler reads the
+      // same object the fld() inputs mutate. (collectUlipDraft relied on
+      // data-key attributes that fld() never emits, so edits were silently lost.)
       const draft = { ...u };
+      _ulipDrafts[i] = draft;
       return `
         <div class="panel mt-12 ulip-card">
           <div class="panel-header"><span class="panel-title">Edit ULIP — ${u.name || 'ULIP'}</span></div>
@@ -230,13 +234,10 @@ function renderULIPs(rate) {
   el.querySelectorAll('[data-save-ulip]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const i = parseInt(btn.dataset.saveUlip);
-      const card = btn.closest('.ulip-card');
-      // The draft for this card lives in the closure of the rendered inputs;
-      // re-read straight from the inputs to be safe.
-      const draft = {};
-      card.querySelectorAll('.form-input').forEach(() => {});
-      // Simpler: rebuild from the live inputs via fld's draft. Instead, re-collect:
-      Object.assign(inv().ulips[i], collectUlipDraft(card, inv().ulips[i]));
+      // fld() wires each input to mutate _ulipDrafts[i] directly via closure,
+      // so the draft already reflects every edit at save time.
+      Object.assign(inv().ulips[i], _ulipDrafts[i] || {});
+      delete _ulipDrafts[i];
       await persist();
       _editing = null;
       renderTab();
@@ -268,16 +269,9 @@ function renderULIPs(rate) {
   });
 }
 
-// Read ULIP edit inputs directly off the DOM card. Maps form labels back to keys
-// by position is fragile, so we tag each input via data-key in the markup instead.
-function collectUlipDraft(card, existing) {
-  const draft = { ...existing };
-  card.querySelectorAll('[data-key]').forEach(e => {
-    const k = e.dataset.key;
-    draft[k] = e.type === 'number' ? (parseFloat(e.value) || 0) : e.value;
-  });
-  return draft;
-}
+// Drafts for in-progress ULIP edits, keyed by ULIP index. fld() inputs mutate
+// the stored draft via closure; the Save handler reads it back from here.
+const _ulipDrafts = {};
 
 // ── UK TAX-ADVANTAGED WRAPPERS ─────────────────────────────────
 
