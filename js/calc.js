@@ -16,20 +16,30 @@ export function calculateNetPay({
   const baseMonthly       = (baseSalaryGBP || 0) / 12;
   const avgOvertimeMonthly = avgOvertimeGrossGBP || 0;
 
-  // Salary sacrifice: pension reduces taxable AND NIable pay
-  // Pension is calculated as % of total gross (base + OT) per user request
+  // Pension scheme basis — IMPORTANT (verified against the May 2026 payslip):
+  // This employer's workplace pension is NOT a salary-sacrifice scheme. It is a
+  // Relief-at-Source / Net-Pay-Arrangement deduction, so the pension contribution
+  // does NOT reduce taxable income or NI-able pay. Income Tax and NI are charged on
+  // the FULL gross (base + OT); the pension is simply deducted from net.
+  //
+  // Empirical proof (May 2026, salary £26,000 + £725 OT, code 1034L):
+  //   Tax on full gross   = £405.87  (payslip £405.80)  ✓
+  //   NI  on full gross    = £147.53  (payslip £147.49)  ✓
+  //   NI/Tax on (gross − pension) gave £139.94 / £386.89 — materially WRONG.
+  // The earlier MATH_AUDIT assumed salary sacrifice from the brief; the actual
+  // payslip overrides that assumption. Pension is % of total gross (base + OT).
   const annualGross = (baseMonthly + avgOvertimeMonthly) * 12;
   const annualPension = annualGross * ((pensionEmployeeRate || 0) / 100);
-  const adjustedGross = Math.max(0, annualGross - annualPension); // taxable and NIable
+  const taxableGross = annualGross; // tax & NI charged on full gross (no sacrifice)
 
   // Personal Allowance (tapered above £100,000 — £1 PA lost per £2 over £100k)
   let pa = taxFreeAllowanceAnnual || 12570;
-  if (adjustedGross > 100000) {
-    pa = Math.max(0, pa - Math.floor((adjustedGross - 100000) / 2));
+  if (taxableGross > 100000) {
+    pa = Math.max(0, pa - Math.floor((taxableGross - 100000) / 2));
   }
 
   // Income Tax — band by band
-  const taxable = Math.max(0, adjustedGross - pa);
+  const taxable = Math.max(0, taxableGross - pa);
   const basicBandMax = Math.max(0, 50270 - pa); // width of basic rate band above PA
   const basicTax = Math.min(taxable, basicBandMax) * 0.20;
   const higherTax = Math.min(Math.max(0, taxable - basicBandMax), 125140 - 50270) * 0.40;
@@ -42,8 +52,8 @@ export function calculateNetPay({
   const niPT = 12570; // primary threshold
   const niUEL = 50270; // upper earnings limit
   const annualNI =
-    Math.max(0, Math.min(adjustedGross, niUEL) - niPT) * 0.08 +
-    Math.max(0, adjustedGross - niUEL) * 0.02;
+    Math.max(0, Math.min(taxableGross, niUEL) - niPT) * 0.08 +
+    Math.max(0, taxableGross - niUEL) * 0.02;
 
   // Monthly figures
   const monthlyIncomeTax = round2(annualIncomeTax / 12);
@@ -52,7 +62,20 @@ export function calculateNetPay({
   const totalMonthlyGross = round2(baseMonthly + avgOvertimeMonthly);
   const netMonthly = round2(totalMonthlyGross - monthlyIncomeTax - monthlyNI - monthlyPension);
 
-  const extraTax        = underpaymentMonthlyGBP || 0;
+  // Underpayment collection — avoid double-counting.
+  // HMRC collects a prior-year underpayment by REDUCING the tax-code allowance
+  // (e.g. 1257L → 1034L). When the user has already entered that reduced allowance
+  // in taxFreeAllowanceAnnual, the extra tax is ALREADY inside monthlyIncomeTax —
+  // deducting underpaymentMonthlyGBP again would double-count it.
+  // Verified against the May 2026 payslip: code 1034L (allowance £10,348) produced
+  // tax £405.80 which already includes the ~£37/mo underpayment; net reconciled
+  // exactly to £2,243.51 with NO separate underpayment line.
+  // We therefore only apply underpaymentMonthlyGBP as a SEPARATE deduction when the
+  // allowance has NOT been reduced (i.e. it is at/above the standard £12,570 and the
+  // underpayment is being collected by some other route).
+  const STANDARD_PA = 12570;
+  const allowanceReduced = (taxFreeAllowanceAnnual || STANDARD_PA) < STANDARD_PA;
+  const extraTax        = allowanceReduced ? 0 : (underpaymentMonthlyGBP || 0);
   const employerPension = baseMonthly * ((pensionEmployerRate || 0) / 100);
   const hourlyRate      = hoursPerWeek > 0 ? round2((baseSalaryGBP || 0) / (hoursPerWeek * 52)) : 0;
 
@@ -310,19 +333,19 @@ export function taxTrackerProgress(tracker) {
 export function projectNetWorthTimeline(params) {
   const {
     startDate,
-    startNetWorth,
-    monthlySaving,
-    pensionValue,
-    pensionMonthly,
-    pensionGrowthRate,
+    startNetWorth       = 0,
+    monthlySaving       = 0,
+    pensionValue        = 0,
+    pensionMonthly      = 0,
+    pensionGrowthRate   = 7,
     ulipTotalValueGBP   = 0,   // sum of all ULIP current values in GBP
     ulipMonthlyPremGBP  = 0,   // sum of all monthly premiums in GBP
     ulipPayMonthsLeft   = 0,   // months until last pay term ends
     ulipGrowthRate      = 12,  // average expected ULIP growth rate %/yr
-    debtOutstandingINR,
-    debtEmiINR,
-    debtRatePercent,
-    inrGbpRate,
+    debtOutstandingINR  = 0,
+    debtEmiINR          = 0,
+    debtRatePercent     = 0,
+    inrGbpRate          = 83,
     careerTransitionDate,
     newSalaryGBP,
     currentSalaryGBP
