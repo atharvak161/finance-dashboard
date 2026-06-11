@@ -99,16 +99,67 @@ function renderDashTab(tab, st) {
 
 // ── Shared helpers ────────────────────────────────────────────
 
-function metricCard(label, value, colorClass, sub) {
+function metricCard(label, value, colorClass, sub, sparklineId) {
   const cls = colorClass === 'positive' ? 'text-positive'
             : colorClass === 'negative' ? 'text-negative'
             : colorClass === 'warning'  ? 'text-warning'
             : 'text-info';
-  return `<div class="metric-card">
+  const trend = colorClass === 'positive' ? 'positive'
+              : colorClass === 'negative' ? 'negative'
+              : colorClass === 'warning'  ? 'neutral'
+              : 'neutral';
+  const sparkHtml = sparklineId
+    ? `<canvas class="metric-sparkline" id="${sparklineId}" width="60" height="24"></canvas>`
+    : '';
+  return `<div class="metric-card" data-trend="${trend}">
     <div class="label">${label}</div>
     <div class="value ${cls}">${value}</div>
+    ${sparkHtml}
     <div class="sub">${sub || ''}</div>
   </div>`;
+}
+
+// Draw a tiny 7-bar sparkline on a 60×24 canvas using 2D API (no Chart.js overhead)
+function drawSparkline(canvasId, values) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const W = 60, H = 24;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+
+  if (!values || values.length === 0) {
+    // Flat placeholder line
+    ctx.strokeStyle = 'rgba(0,229,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, H / 2);
+    ctx.lineTo(W, H / 2);
+    ctx.stroke();
+    return;
+  }
+
+  const n = values.length;
+  const mn = Math.min(...values);
+  const mx = Math.max(...values);
+  const range = mx - mn || 1;
+
+  // Determine trend colour
+  const first = values[0], last = values[n - 1];
+  const changePct = first !== 0 ? ((last - first) / Math.abs(first)) * 100 : 0;
+  const color = changePct > 2 ? '#00e676' : changePct < -2 ? '#ff1744' : '#00e5ff';
+
+  const barW = Math.floor((W - (n - 1)) / n);
+  const gap = 1;
+
+  for (let i = 0; i < n; i++) {
+    const barH = Math.max(2, Math.round(((values[i] - mn) / range) * (H - 4)));
+    const x = i * (barW + gap);
+    const y = H - barH;
+    ctx.fillStyle = color + (i === n - 1 ? 'ff' : '99');
+    ctx.fillRect(x, y, barW, barH);
+  }
 }
 
 function panel(title, bodyHtml) {
@@ -198,16 +249,24 @@ function renderOverview(host, st) {
   const debtPct      = originalDebt <= 0 || totalDebt <= 0 ? (totalDebt <= 0 ? 100 : 0)
     : Math.max(0, Math.min(100, round2(((originalDebt - totalDebt) / originalDebt) * 100)));
 
+  // Build sparkline data series from monthly log (last 6 entries)
+  const recentLog = log.slice(-6);
+  const spkNetWorth  = recentLog.map(r => r.netWorthGBP    || r.netGBP || 0);
+  const spkIncome    = recentLog.map(r => r.netGBP         || 0);
+  const spkExpenses  = recentLog.map(r => r.expensesGBP    || 0);
+  const spkSurplus   = recentLog.map(r => r.savedGBP       || 0);
+  const spkSavRate   = recentLog.map(r => r.netGBP > 0 ? round2((r.savedGBP / r.netGBP) * 100) : 0);
+
   host.innerHTML = `
     <div class="grid-4" data-section="income">
-      ${metricCard('Net Worth', fmtGBP(nw.netWorth), nw.netWorth >= 0 ? 'positive' : 'negative', `Assets ${fmtGBP(nw.totalAssets)} · Debt ${fmtGBP(nw.totalDebts)}`)}
-      ${metricCard('Take-Home (w/ OT)', fmtGBP(pay.netWithOT), 'info', `Base ${fmtGBP(pay.netBase)} /mo`)}
-      ${metricCard('Total Expenses', fmtGBP(totalExp), 'warning', `${effItems.filter(i=>i.active).length} active items`)}
-      ${metricCard('Monthly Surplus', fmtGBP(surplus), surplus >= 0 ? 'positive' : 'negative', `Savings rate ${fmtPct(savingsRate)}`)}
+      ${metricCard('Net Worth', fmtGBP(nw.netWorth), nw.netWorth >= 0 ? 'positive' : 'negative', `Assets ${fmtGBP(nw.totalAssets)} · Debt ${fmtGBP(nw.totalDebts)}`, 'spk-networth')}
+      ${metricCard('Take-Home (w/ OT)', fmtGBP(pay.netWithOT), 'info', `Base ${fmtGBP(pay.netBase)} /mo`, 'spk-income')}
+      ${metricCard('Total Expenses', fmtGBP(totalExp), 'warning', `${effItems.filter(i=>i.active).length} active items`, 'spk-expenses')}
+      ${metricCard('Monthly Surplus', fmtGBP(surplus), surplus >= 0 ? 'positive' : 'negative', `Savings rate ${fmtPct(savingsRate)}`, 'spk-surplus')}
     </div>
 
     <div class="grid-4 mt-20">
-      ${metricCard('Savings Rate', fmtPct(savingsRate), savingsRate>=20?'positive':savingsRate>=10?'warning':'negative', 'Benchmark 20%+')}
+      ${metricCard('Savings Rate', fmtPct(savingsRate), savingsRate>=20?'positive':savingsRate>=10?'warning':'negative', 'Benchmark 20%+', 'spk-savrate')}
       ${metricCard('Emergency Runway', runway.toFixed(1) + ' months', runwayColor, runway>=6?'Excellent':runway>=3?'3–6mo target':'Build fund')}
       ${metricCard('SBI Outstanding', fmtGBP(nw.sbiGBP), 'negative', fmtINR(dbt.sbi?.outstandingINR || 0))}
       ${metricCard('India Trip', fmtPct(india.pct), india.pct>=80?'positive':'info', `${fmtGBP(indiaTotalSaved)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`)}
@@ -268,6 +327,13 @@ function renderOverview(host, st) {
   gauge('ov-gauge-debt',      debtPct,       debtPct >= 50 ? C.positive : C.warning);
   gauge('ov-gauge-emergency', emergency.pct, emergency.pct >= 80 ? C.positive : C.warning);
   gauge('ov-gauge-india',     india.pct,     india.pct >= 80 ? C.positive : C.warning);
+
+  // Sparklines — draw after DOM is ready
+  drawSparkline('spk-networth',  spkNetWorth.length  ? spkNetWorth  : null);
+  drawSparkline('spk-income',    spkIncome.length    ? spkIncome    : null);
+  drawSparkline('spk-expenses',  spkExpenses.length  ? spkExpenses  : null);
+  drawSparkline('spk-surplus',   spkSurplus.length   ? spkSurplus   : null);
+  drawSparkline('spk-savrate',   spkSavRate.length   ? spkSavRate   : null);
 }
 
 // ══════════════════════════════════════════════════════════════

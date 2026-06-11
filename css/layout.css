@@ -199,6 +199,68 @@
   .chart-h-300{height:240px}.chart-h-360{height:260px}
 }
 
+/* ── Mobile bottom tab bar ───────────────── */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 56px;
+  background: linear-gradient(180deg, #090d1c 0%, #080b18 100%);
+  border-top: 1px solid rgba(0,191,255,0.15);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.6), 0 -1px 0 rgba(0,191,255,0.08);
+  z-index: 1000;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: space-around;
+  padding: 0;
+}
+
+.mobile-bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  letter-spacing: 0.02em;
+  padding: 6px 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-bottom-nav-item svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.mobile-bottom-nav-item:hover {
+  color: var(--text-secondary);
+}
+
+.mobile-bottom-nav-item.active {
+  color: var(--color-info);
+  text-shadow: 0 0 8px var(--glow-info);
+}
+
+.mobile-bottom-nav-item.active svg {
+  filter: drop-shadow(0 0 4px var(--glow-info));
+}
+
+@media (max-width: 767px) {
+  .mobile-bottom-nav { display: flex; }
+  /* Push page content up so it's not hidden behind the tab bar */
+  .content { padding-bottom: 72px !important; }
+}
+
 /* ── Mobile navigation ───────────────────── */
 .mobile-nav-toggle {
   display: none;

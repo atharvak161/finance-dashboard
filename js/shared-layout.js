@@ -122,6 +122,59 @@ export function renderSharedLayout(activeNav, state) {
 
   // ── Mobile navigation ─────────────────────────────────────
   initMobileNav();
+  injectMobileBottomNav(activeNav);
+}
+
+// ── Mobile bottom tab bar ─────────────────────────────────────
+
+const MOBILE_NAV = [
+  {
+    id: 'overview',
+    label: 'Dashboard',
+    href: 'dashboard.html',
+    icon: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+  },
+  {
+    id: 'expenses',
+    label: 'Expenses',
+    href: 'expenses.html',
+    icon: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  },
+  {
+    id: 'assets',
+    label: 'Assets',
+    href: 'assets.html',
+    icon: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  },
+  {
+    id: 'goals',
+    label: 'Goals',
+    href: 'goals.html',
+    icon: '<circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.4 7.05 11.5 7.69 12.06a.5.5 0 0 0 .62 0C12.95 21.5 20 15.4 20 10a8 8 0 0 0-8-8z"/>',
+  },
+  {
+    id: 'networth',
+    label: 'Analytics',
+    href: 'networth.html',
+    icon: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+  },
+];
+
+function injectMobileBottomNav(activeNav) {
+  if (document.querySelector('.mobile-bottom-nav')) return;
+
+  const nav = document.createElement('nav');
+  nav.className = 'mobile-bottom-nav';
+  nav.setAttribute('aria-label', 'Mobile navigation');
+
+  nav.innerHTML = MOBILE_NAV.map(item => `
+    <a class="mobile-bottom-nav-item${item.id === activeNav ? ' active' : ''}" href="${item.href}" aria-label="${item.label}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${item.icon}</svg>
+      <span>${item.label}</span>
+    </a>
+  `).join('');
+
+  document.body.appendChild(nav);
 }
 
 // Mobile navigation
