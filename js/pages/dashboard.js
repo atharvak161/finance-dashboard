@@ -99,7 +99,7 @@ function renderDashTab(tab, st) {
 
 // ── Shared helpers ────────────────────────────────────────────
 
-function metricCard(label, value, colorClass, sub, sparklineId) {
+function metricCard(label, value, colorClass, sub, sparklineId, deltaHtml) {
   const cls = colorClass === 'positive' ? 'text-positive'
             : colorClass === 'negative' ? 'text-negative'
             : colorClass === 'warning'  ? 'text-warning'
@@ -114,9 +114,33 @@ function metricCard(label, value, colorClass, sub, sparklineId) {
   return `<div class="metric-card" data-trend="${trend}">
     <div class="label">${label}</div>
     <div class="value ${cls}">${value}</div>
+    ${deltaHtml ? `<div class="metric-delta">${deltaHtml}</div>` : ''}
     ${sparkHtml}
     <div class="sub">${sub || ''}</div>
   </div>`;
+}
+
+// Build delta HTML for a GBP value: compares current vs previous from monthlyLog
+function buildDeltaGBP(current, previous) {
+  if (previous == null || previous === undefined) return '';
+  const diff = current - previous;
+  const threshold = Math.abs(previous) * 0.01; // 1% threshold for "flat"
+  if (Math.abs(diff) <= threshold && threshold > 0) {
+    return `<span class="delta-flat">— no change</span>`;
+  }
+  const formatted = '£' + Math.abs(Math.round(diff)).toLocaleString('en-GB');
+  if (diff > 0) return `<span class="delta-pos">▲ ${formatted} vs last month</span>`;
+  return `<span class="delta-neg">▼ ${formatted} vs last month</span>`;
+}
+
+// Build delta HTML for a percentage value
+function buildDeltaPct(current, previous) {
+  if (previous == null || previous === undefined) return '';
+  const diff = current - previous;
+  if (Math.abs(diff) < 0.5) return `<span class="delta-flat">— no change</span>`;
+  const formatted = Math.abs(diff).toFixed(1) + '%';
+  if (diff > 0) return `<span class="delta-pos">▲ ${formatted} vs last month</span>`;
+  return `<span class="delta-neg">▼ ${formatted} vs last month</span>`;
 }
 
 // Draw a tiny 7-bar sparkline on a 60×24 canvas using 2D API (no Chart.js overhead)
@@ -257,20 +281,80 @@ function renderOverview(host, st) {
   const spkSurplus   = recentLog.map(r => r.savedGBP       || 0);
   const spkSavRate   = recentLog.map(r => r.netGBP > 0 ? round2((r.savedGBP / r.netGBP) * 100) : 0);
 
+  // Delta calculations — require at least 2 log entries
+  const prevEntry = log.length >= 2 ? log[log.length - 2] : null;
+  const prevNetWorth = prevEntry ? (prevEntry.netWorthGBP || prevEntry.netGBP || 0) : null;
+  const prevNetPay   = prevEntry ? (prevEntry.netGBP || 0) : null;
+  const prevExpenses = prevEntry ? (prevEntry.expensesGBP || 0) : null;
+  const prevSurplus  = prevEntry ? (prevEntry.savedGBP || 0) : null;
+  const prevSavRate  = (prevEntry && prevEntry.netGBP > 0) ? round2((prevEntry.savedGBP / prevEntry.netGBP) * 100) : null;
+
+  // Monthly Commitments widget data
+  const activeExpenses = effItems.filter(i => i.active);
+  const emiGBP = dbt.sbi?.emiINR > 0 ? round2(dbt.sbi.emiINR / safeRate(rate)) : 0;
+  const commitmentRows = [...activeExpenses.map(i => ({
+    name: i.name,
+    category: i.category || 'Other',
+    amountGBP: i.monthlyGBP || 0,
+  }))];
+  if (emiGBP > 0) {
+    commitmentRows.push({ name: 'SBI Education Loan', category: 'Debt', amountGBP: emiGBP });
+  }
+  commitmentRows.sort((a, b) => b.amountGBP - a.amountGBP);
+  const commitmentTotal = round2(commitmentRows.reduce((s, r) => s + r.amountGBP, 0));
+  const MAX_ROWS = 8;
+  const visibleRows = commitmentRows.slice(0, MAX_ROWS);
+  const hiddenCount = commitmentRows.length - MAX_ROWS;
+
+  const catBadgeClass = cat => {
+    const c = (cat || '').toLowerCase();
+    if (c === 'housing' || c === 'rent') return 'badge-info';
+    if (c === 'debt') return 'badge-negative';
+    if (c === 'food' || c === 'groceries') return 'badge-warning';
+    if (c === 'transport' || c === 'travel') return 'badge-neutral';
+    if (c === 'savings' || c === 'investment') return 'badge-positive';
+    return 'badge-neutral';
+  };
+
+  const commitmentRowsHtml = visibleRows.map(r => `
+    <div class="commitment-row">
+      <span class="commitment-name">${r.name}</span>
+      <span class="badge ${catBadgeClass(r.category)} commitment-cat">${r.category}</span>
+      <span class="commitment-amount mono">${fmtGBP(r.amountGBP)}</span>
+    </div>`).join('');
+  const moreHtml = hiddenCount > 0
+    ? `<div class="commitment-more">+ ${hiddenCount} more</div>`
+    : '';
+  const commitmentWidget = commitmentRows.length > 0 ? `
+    <div class="mt-20">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Monthly Commitments</span>
+          <span class="panel-title-total mono">Total: ${fmtGBP(commitmentTotal)}</span>
+        </div>
+        <div class="commitment-list">
+          ${commitmentRowsHtml}
+          ${moreHtml}
+        </div>
+      </div>
+    </div>` : '';
+
   host.innerHTML = `
     <div class="grid-4" data-section="income">
-      ${metricCard('Net Worth', fmtGBP(nw.netWorth), nw.netWorth >= 0 ? 'positive' : 'negative', `Assets ${fmtGBP(nw.totalAssets)} · Debt ${fmtGBP(nw.totalDebts)}`, 'spk-networth')}
-      ${metricCard('Take-Home (w/ OT)', fmtGBP(pay.netWithOT), 'info', `Base ${fmtGBP(pay.netBase)} /mo`, 'spk-income')}
-      ${metricCard('Total Expenses', fmtGBP(totalExp), 'warning', `${effItems.filter(i=>i.active).length} active items`, 'spk-expenses')}
-      ${metricCard('Monthly Surplus', fmtGBP(surplus), surplus >= 0 ? 'positive' : 'negative', `Savings rate ${fmtPct(savingsRate)}`, 'spk-surplus')}
+      ${metricCard('Net Worth', fmtGBP(nw.netWorth), nw.netWorth >= 0 ? 'positive' : 'negative', `Assets ${fmtGBP(nw.totalAssets)} · Debt ${fmtGBP(nw.totalDebts)}`, 'spk-networth', buildDeltaGBP(nw.netWorth, prevNetWorth))}
+      ${metricCard('Take-Home (w/ OT)', fmtGBP(pay.netWithOT), 'info', `Base ${fmtGBP(pay.netBase)} /mo`, 'spk-income', buildDeltaGBP(pay.netWithOT, prevNetPay))}
+      ${metricCard('Total Expenses', fmtGBP(totalExp), 'warning', `${effItems.filter(i=>i.active).length} active items`, 'spk-expenses', buildDeltaGBP(totalExp, prevExpenses))}
+      ${metricCard('Monthly Surplus', fmtGBP(surplus), surplus >= 0 ? 'positive' : 'negative', `Savings rate ${fmtPct(savingsRate)}`, 'spk-surplus', buildDeltaGBP(surplus, prevSurplus))}
     </div>
 
     <div class="grid-4 mt-20">
-      ${metricCard('Savings Rate', fmtPct(savingsRate), savingsRate>=20?'positive':savingsRate>=10?'warning':'negative', 'Benchmark 20%+', 'spk-savrate')}
+      ${metricCard('Savings Rate', fmtPct(savingsRate), savingsRate>=20?'positive':savingsRate>=10?'warning':'negative', 'Benchmark 20%+', 'spk-savrate', buildDeltaPct(savingsRate, prevSavRate))}
       ${metricCard('Emergency Runway', runway.toFixed(1) + ' months', runwayColor, runway>=6?'Excellent':runway>=3?'3–6mo target':'Build fund')}
       ${metricCard('SBI Outstanding', fmtGBP(nw.sbiGBP), 'negative', fmtINR(dbt.sbi?.outstandingINR || 0))}
       ${metricCard('India Trip', fmtPct(india.pct), india.pct>=80?'positive':'info', `${fmtGBP(indiaTotalSaved)} of ${fmtGBP(goals.indiaTrip?.targetGBP||3000)}`)}
     </div>
+
+    ${commitmentWidget}
 
     <div class="grid-2 mt-20">
       ${chartPanel('Net Pay Trend', 'ov-chart-trend')}

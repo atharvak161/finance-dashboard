@@ -110,6 +110,7 @@ function render(st) {
   renderSankey(st);
   renderSavingsRateChart(st);
   renderSurplusTrajectoryChart(st);
+  renderSpendHeatmap(st);
   renderBudgetRadarChart(st);
 }
 
@@ -308,6 +309,127 @@ function renderSurplusTrajectoryChart(st) {
                 y: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, callback: v => '£' + v } } },
     },
   });
+}
+
+// ── Spending Category Heat Map ────────────────────────────────
+
+function renderSpendHeatmap(st) {
+  const container = document.getElementById('spend-heatmap');
+  if (!container) return;
+
+  const items = (st.expenses?.items || []).filter(i => i.active !== false && i.monthlyGBP > 0);
+
+  // Empty state — no expense data at all
+  if (items.length === 0) {
+    container.innerHTML = `<div class="empty-state">Add expenses in Settings to see your spending heat map.</div>`;
+    return;
+  }
+
+  // ── Build the 6-month label list ────────────────────────────
+  const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now = new Date();
+  const months = []; // [{label:'Jun 2026', key:'2026-06'}]
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = `${MONTH_ABBR[d.getMonth()]} ${d.getFullYear()}`;
+    months.push({ key, label });
+  }
+
+  // ── Try to use monthlyLog categoryBreakdown ──────────────────
+  // monthlyLog entries look like { month:'2026-05', netGBP:x, savedGBP:x, ... }
+  // categoryBreakdown is not part of the default schema, so we check dynamically.
+  const log = st.monthlyLog || [];
+  const logByKey = {};
+  for (const entry of log) {
+    if (entry.month) logByKey[entry.month] = entry;
+  }
+  const hasHistoricalBreakdown = log.some(e => e.categoryBreakdown && Object.keys(e.categoryBreakdown).length > 0);
+
+  // Build category list from current expenses
+  const catSet = new Set();
+  for (const item of items) catSet.add(item.category);
+  const categories = [...catSet].sort();
+
+  // currentMonth spend per category (from expenses.items)
+  const currentCatSpend = {};
+  for (const item of items) {
+    currentCatSpend[item.category] = (currentCatSpend[item.category] || 0) + item.monthlyGBP;
+  }
+
+  // ── Build data grid: data[category][monthKey] = GBP ─────────
+  const data = {};
+  for (const cat of categories) {
+    data[cat] = {};
+    for (const m of months) {
+      if (hasHistoricalBreakdown) {
+        const entry = logByKey[m.key];
+        data[cat][m.key] = (entry?.categoryBreakdown?.[cat]) || 0;
+      } else {
+        // Fallback: use current allocation for every month
+        data[cat][m.key] = currentCatSpend[cat] || 0;
+      }
+    }
+  }
+
+  // ── Compute max spend for colour scale ──────────────────────
+  let maxSpend = 0;
+  for (const cat of categories) {
+    for (const m of months) {
+      const v = data[cat][m.key];
+      if (v > maxSpend) maxSpend = v;
+    }
+  }
+  if (maxSpend === 0) maxSpend = 1; // avoid division by zero
+
+  const cellColor = (amount) => {
+    const opacity = amount > 0 ? 0.08 + (amount / maxSpend) * 0.82 : 0.04;
+    return `rgba(0,191,255,${opacity.toFixed(3)})`;
+  };
+
+  // ── Build HTML ───────────────────────────────────────────────
+  // Grid columns: label + 6 month cells + 1 total cell
+  const numCols = 1 + months.length + 1;
+  let html = `<div class="heat-map-wrap">`;
+  html += `<div class="heat-grid" style="grid-template-columns:minmax(96px,auto) repeat(${months.length},44px) 70px">`;
+
+  // Header row
+  html += `<div class="heat-col-header" style="text-align:left">Category</div>`;
+  for (const m of months) {
+    html += `<div class="heat-col-header">${m.label.replace(' ', '<br>')}</div>`;
+  }
+  html += `<div class="heat-col-header total-header">Current</div>`;
+
+  // Data rows
+  for (const cat of categories) {
+    html += `<div class="heat-label">${cat}</div>`;
+    for (const m of months) {
+      const amount = data[cat][m.key];
+      const bg = cellColor(amount);
+      const tooltip = amount > 0 ? `${cat} · ${m.label}: £${amount.toFixed(0)}` : `${cat} · ${m.label}: £0`;
+      html += `<div class="heat-cell" style="background:${bg}" data-tooltip="${tooltip}"></div>`;
+    }
+    const total = currentCatSpend[cat] || 0;
+    html += `<div class="heat-cell-total">£${total.toFixed(0)}</div>`;
+  }
+
+  html += `</div>`; // .heat-grid
+
+  // Legend
+  html += `
+    <div class="heat-legend">
+      <span>Lower spend</span>
+      <div class="heat-legend-bar"></div>
+      <span>Higher spend</span>
+    </div>`;
+
+  // Fallback note
+  if (!hasHistoricalBreakdown) {
+    html += `<div class="heat-fallback-note">Historical detail unavailable — showing current allocation across all months.</div>`;
+  }
+
+  html += `</div>`; // .heat-map-wrap
+  container.innerHTML = html;
 }
 
 // ── Budget vs Actual Radar ────────────────────────────────────
