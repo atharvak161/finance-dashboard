@@ -1,5 +1,5 @@
 import { initPage, saveSec } from '../page-init.js';
-import { applyScheduledChanges, totalExpenses, fmtGBP } from '../calc.js';
+import { applyScheduledChanges, totalExpenses, fmtGBP, expensesByCategory } from '../calc.js';
 
 // Edit-only Expenses page. Charts/heatmap moved to the dashboard.
 // Keeps the inline add/edit/delete expense list, adds a monthly-total summary
@@ -44,6 +44,9 @@ function render(st) {
     </table>`;
 
   bindExpenseEvents(st);
+
+  // Budget utilization bar
+  renderBudgetUtilization(st, effItems, total);
 
   // Scheduled changes editor
   renderScheduledChanges(st, today);
@@ -184,6 +187,71 @@ function bindScheduledEvents(st) {
       render(st);
     });
   });
+}
+
+// ── Budget Utilization ────────────────────────────────────────
+
+function renderBudgetUtilization(st, effItems, total) {
+  const container = document.getElementById('budget-utilization');
+  if (!container) return;
+
+  // Budget target: from settings, or fall back to 110% of current spend as a soft cap
+  const budgetTarget = st.settings?.monthlyBudgetGBP || 0;
+  if (budgetTarget <= 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const pct = Math.min(200, total > 0 ? Math.round((total / budgetTarget) * 100) : 0);
+
+  // Segmented bar colour
+  const barColor = pct < 70  ? '#00e676'   // green
+                 : pct < 90  ? '#ff9100'   // amber
+                             : '#ff1744';  // red
+  const barLabel = pct < 70  ? 'On track'
+                 : pct < 90  ? 'Approaching limit'
+                             : 'Over budget';
+  const labelCls = pct < 70  ? 'text-positive'
+                 : pct < 90  ? 'text-warning'
+                             : 'text-negative';
+
+  // Category breakdown chips
+  const byCat   = expensesByCategory(effItems);
+  const catBudgets = st.settings?.chartParams?.budgetByCategory || {};
+  const chips = Object.entries(byCat)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, spent]) => {
+      const catBudget = catBudgets[cat] || 0;
+      const catPct = catBudget > 0 ? Math.round((spent / catBudget) * 100) : null;
+      const chipColor = catPct === null ? 'rgba(0,191,255,0.15)'
+                      : catPct < 70    ? 'rgba(0,230,118,0.14)'
+                      : catPct < 90    ? 'rgba(255,145,0,0.14)'
+                                       : 'rgba(255,23,68,0.14)';
+      const chipText = catPct === null ? '#7a96b3'
+                     : catPct < 70    ? '#00e676'
+                     : catPct < 90    ? '#ff9100'
+                                      : '#ff1744';
+      const pctLabel = catPct !== null ? ` · ${catPct}%` : '';
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-family:var(--font-mono);background:${chipColor};color:${chipText};white-space:nowrap">${escHtml(cat)} ${fmtGBP(spent)}${pctLabel}</span>`;
+    })
+    .join('');
+
+  container.innerHTML = `
+    <div class="panel mt-20">
+      <div class="panel-header">
+        <span class="panel-title">Monthly Budget Utilization</span>
+        <span class="label" style="font-size:11px;color:var(--text-secondary)">${fmtGBP(total)} of ${fmtGBP(budgetTarget)} budget</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+        <span class="${labelCls}" style="font-size:13px;font-weight:600">${barLabel}</span>
+        <span style="font-family:var(--font-mono);font-size:20px;font-weight:600;${pct>=90?'color:#ff1744':pct>=70?'color:#ff9100':'color:#00e676'}">${pct}%</span>
+      </div>
+      <div style="background:rgba(255,255,255,0.07);border-radius:6px;height:12px;overflow:hidden;margin-bottom:14px">
+        <div style="width:${Math.min(100,pct)}%;height:100%;border-radius:6px;background:${barColor};box-shadow:0 0 10px ${barColor}88;transition:width 0.5s ease"></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div>
+    </div>`;
 }
 
 function escHtml(s) {

@@ -39,10 +39,10 @@ function render(st) {
 
   // ── KPI cards ─────────────────────────────────────────────
   document.getElementById('analytics-kpis').innerHTML = [
-    kpiCard('Savings Rate',    fmtPct(savingsRate),  savingsRate>=20?'positive':savingsRate>=10?'warning':'negative', 'Benchmark: 20%+'),
-    kpiCard('Housing Ratio',   fmtPct(housingRatio), housingRatio<=30?'positive':'negative', 'Benchmark: <30%'),
-    kpiCard('Invest Rate',     fmtPct(investRate),   investRate>=10?'positive':'warning', 'Pension contributions'),
-    kpiCard('Cash Runway',     runwayMonths.toFixed(1)+'mo', runwayMonths>=3?'positive':'negative', 'Emergency fund coverage'),
+    kpiCard('Savings Rate',  fmtPct(savingsRate),           savingsRate>=20?'positive':savingsRate>=10?'warning':'negative', 'vs industry 20%+',  savingsRate>=20?'Above benchmark':savingsRate>=10?'Near benchmark':'Below benchmark'),
+    kpiCard('Housing Ratio', fmtPct(housingRatio),          housingRatio<=30?'positive':'negative',                         'vs industry <30%',  housingRatio<=30?'Within safe limit':'Exceeds guideline'),
+    kpiCard('Invest Rate',   fmtPct(investRate),            investRate>=10?'positive':'warning',                            'vs industry 10%+',  investRate>=10?'On track':'Room to grow'),
+    kpiCard('Cash Runway',   runwayMonths.toFixed(1)+'mo',  runwayMonths>=3?'positive':'negative',                         'vs industry 3mo+',  runwayMonths>=6?'Excellent':runwayMonths>=3?'Adequate':'Build fund'),
   ].join('');
 
   // ── Career impact ─────────────────────────────────────────
@@ -113,9 +113,22 @@ function render(st) {
   renderBudgetRadarChart(st);
 }
 
-function kpiCard(label, value, colorClass, sub) {
-  const cls = colorClass==='positive'?'text-positive':colorClass==='negative'?'text-negative':'text-warning';
-  return `<div class="metric-card"><div class="label">${label}</div><div class="value ${cls}">${value}</div><div class="sub">${sub}</div></div>`;
+function kpiCard(label, value, colorClass, benchmarkLabel, statusText) {
+  const cls        = colorClass==='positive'?'text-positive':colorClass==='negative'?'text-negative':'text-warning';
+  const dotColor   = colorClass==='positive'?'#00e676':colorClass==='negative'?'#ff1744':'#ff9100';
+  const dotGlow    = colorClass==='positive'?'rgba(0,230,118,0.6)':colorClass==='negative'?'rgba(255,23,68,0.6)':'rgba(255,145,0,0.6)';
+  const trendAttr  = colorClass==='positive'?'positive':colorClass==='negative'?'negative':'neutral';
+  const benchHtml  = benchmarkLabel ? `<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono);margin-top:-2px">${benchmarkLabel}</div>` : '';
+  const statusHtml = statusText ? `<div style="font-size:11.5px;color:${dotColor};font-family:var(--font-mono)">${statusText}</div>` : '';
+  return `<div class="metric-card" data-trend="${trendAttr}" style="gap:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="label">${label}</div>
+      <span style="width:9px;height:9px;border-radius:50%;background:${dotColor};box-shadow:0 0 7px ${dotGlow};flex-shrink:0;display:inline-block"></span>
+    </div>
+    <div class="value ${cls}">${value}</div>
+    ${benchHtml}
+    ${statusHtml}
+  </div>`;
 }
 
 // ── Chart ─────────────────────────────────────────────────────

@@ -34,11 +34,13 @@
   background: linear-gradient(135deg, #141929 0%, #0f1628 100%);
   border: 1px solid rgba(0,191,255,0.12);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 24px 22px;
   display:flex; flex-direction:column; gap:8px;
   transition:transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   position:relative; overflow:hidden;
   box-shadow:0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.02);
+  /* Left accent bar — default cyan, overridden by data-trend */
+  border-left: 3px solid var(--metric-accent, rgba(0,191,255,0.55));
 }
 .metric-card::after {
   content:'';
@@ -46,10 +48,14 @@
   background:linear-gradient(90deg,transparent,rgba(0,191,255,0.2),transparent);
 }
 .metric-card:hover {
-  transform:translateY(-3px);
+  transform:translateY(-2px);
   border-color:rgba(0,191,255,0.3);
-  box-shadow:0 12px 40px rgba(0,0,0,0.6), 0 0 30px rgba(0,191,255,0.12), inset 0 1px 0 rgba(255,255,255,0.04);
+  box-shadow:0 16px 48px rgba(0,0,0,0.65), 0 0 32px rgba(0,191,255,0.14), inset 0 1px 0 rgba(255,255,255,0.04);
 }
+/* Trend-aware accent colours */
+.metric-card[data-trend="positive"] { --metric-accent: #00e676; }
+.metric-card[data-trend="negative"] { --metric-accent: #ff1744; }
+.metric-card[data-trend="neutral"]  { --metric-accent: #00e5ff; }
 .metric-card .label {
   font-size:11px; font-weight:700;
   color:rgba(0,191,255,0.6);
@@ -65,6 +71,14 @@
 .metric-card .delta { font-size:12px; font-family:var(--font-mono); }
 .delta-pos { color:var(--color-positive); }
 .delta-neg { color:var(--color-negative); }
+
+/* ── Sparkline inside metric card ────────────────────────── */
+.metric-sparkline {
+  display:block;
+  width:60px; height:24px;
+  margin: 2px 0 0;
+  flex-shrink:0;
+}
 
 /* ── Buttons ─────────────────────────────────────────────── */
 .btn {
