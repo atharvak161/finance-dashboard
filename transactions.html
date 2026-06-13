@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance Dashboard — Transactions</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <div class="content page-content" id="content">
+
+      <div class="section-header">
+        <div>
+          <div class="section-title">Transactions</div>
+          <div class="section-subtitle">Import from SMS or bank CSV</div>
+        </div>
+      </div>
+
+      <!-- Tab bar -->
+      <div id="txn-tabs" style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:0">
+        <button class="tab-btn active" data-tab="log">Transaction Log</button>
+        <button class="tab-btn" data-tab="sms">SMS Parser</button>
+        <button class="tab-btn" data-tab="csv">CSV Import</button>
+      </div>
+
+      <div id="txn-content"></div>
+
+    </div>
+  </div>
+</div>
+<script type="module" src="js/pages/transactions.js"></script>
+</body>
+</html>
