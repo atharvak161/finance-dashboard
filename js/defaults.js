@@ -309,4 +309,8 @@ export const DEFAULTS = {
       netDoubleTaxPositionGBP: 0,     // GBP. Net total tax paid on Indian income in both countries (auto-calculated).
     },
   },
+
+  fin_transactions: {
+    items: [],
+  },
 };
