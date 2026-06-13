@@ -5,6 +5,7 @@ const state = await initPage('calendar');
 
 let viewYear  = new Date().getFullYear();
 let viewMonth = new Date().getMonth(); // 0-indexed
+let _calSaveTimer;
 
 document.getElementById('cal-prev').addEventListener('click', () => {
   viewMonth--;
@@ -104,7 +105,6 @@ function render() {
     </div>`;
 
   // Wire due-day inputs — debounced save
-  let saveTimer;
   document.querySelectorAll('[data-item-id]').forEach(input => {
     input.addEventListener('change', async () => {
       const id = input.dataset.itemId;
@@ -113,8 +113,8 @@ function render() {
       const item = (state.expenses?.items || []).find(i => i.id === id);
       if (item) {
         item.dayOfMonth = day;
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(async () => {
+        clearTimeout(_calSaveTimer);
+        _calSaveTimer = setTimeout(async () => {
           await saveSec('fin_expenses', state.expenses);
           render(); // re-render calendar with updated positions
         }, 400);

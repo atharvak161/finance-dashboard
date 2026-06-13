@@ -9,6 +9,7 @@ const CAT_COLOURS = {
 };
 
 const state = await initPage('envelopes');
+let _envSaveTimer;
 
 // Ensure envelopes structure exists
 if (!state.envelopes) state.envelopes = { month: '', envelopes: [] };
@@ -36,7 +37,7 @@ if (state.envelopes.month !== nowKey) {
   // New month: reset spent amounts, keep targets
   state.envelopes.month = nowKey;
   state.envelopes.envelopes.forEach(e => { e.spentGBP = 0; });
-  saveSec('fin_envelopes', state.envelopes);
+  await saveSec('fin_envelopes', state.envelopes);
 }
 
 document.getElementById('env-add-btn').addEventListener('click', async () => {
@@ -161,10 +162,9 @@ function render() {
 }
 
 function wireEvents() {
-  let saveTimer;
   function schedSave() {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(async () => {
+    clearTimeout(_envSaveTimer);
+    _envSaveTimer = setTimeout(async () => {
       await saveSec('fin_envelopes', state.envelopes);
       render();
     }, 500);

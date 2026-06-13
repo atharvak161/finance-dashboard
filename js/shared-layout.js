@@ -20,17 +20,20 @@ const NAV = [
 ];
 
 const SECTION_TITLES = {
-  overview: 'Overview',
-  income:   'Income',
-  overtime: 'OT Tracker',
-  expenses: 'Expenses',
-  debts:    'Debts',
-  assets:   'Assets & Investments',
-  networth: 'Net Worth Timeline',
-  goals:    'Goals & Savings',
-  tax:      'Tax Tracker',
-  export:   'Export',
-  settings: 'Preferences',
+  overview:     'Overview',
+  income:       'Income',
+  overtime:     'OT Tracker',
+  expenses:     'Expenses',
+  transactions: 'Transactions',
+  calendar:     'Bill Calendar',
+  envelopes:    'Envelopes',
+  debts:        'Debts',
+  assets:       'Assets & Investments',
+  networth:     'Net Worth Timeline',
+  goals:        'Goals & Savings',
+  tax:          'Tax Tracker',
+  export:       'Export',
+  settings:     'Preferences',
 };
 
 function svgIcon(path, extra = '') {
@@ -173,7 +176,7 @@ export function renderSharedLayout(activeNav, state) {
     const NAV_MAP = {
       d: 'dashboard.html', e: 'expenses.html', i: 'income.html',
       a: 'assets.html',    t: 'transactions.html', n: 'networth.html',
-      g: 'goals.html',     x: 'analytics.html',   c: 'calendar.html',
+      l: 'goals.html',     x: 'analytics.html',   c: 'calendar.html',
       v: 'envelopes.html',
     };
     document.addEventListener('keydown', (ev) => {
@@ -217,6 +220,7 @@ export function renderSharedLayout(activeNav, state) {
           <kbd style="background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:3px;font-family:monospace">G X</kbd><span>Analytics</span>
           <kbd style="background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:3px;font-family:monospace">G C</kbd><span>Calendar</span>
           <kbd style="background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:3px;font-family:monospace">G V</kbd><span>Envelopes</span>
+          <kbd style="background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:3px;font-family:monospace">G L</kbd><span>Goals</span>
           <kbd style="background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:3px;font-family:monospace">?</kbd><span>This help</span>
           <kbd style="background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:3px;font-family:monospace">⬛</kbd><span>OLED mode</span>
         </div>
@@ -248,22 +252,22 @@ const MOBILE_NAV = [
     icon: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
   },
   {
-    id: 'assets',
-    label: 'Assets',
-    href: 'assets.html',
-    icon: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+    id: 'transactions',
+    label: 'Transactions',
+    href: 'transactions.html',
+    icon: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
   },
   {
-    id: 'goals',
-    label: 'Goals',
-    href: 'goals.html',
-    icon: '<circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.4 7.05 11.5 7.69 12.06a.5.5 0 0 0 .62 0C12.95 21.5 20 15.4 20 10a8 8 0 0 0-8-8z"/>',
+    id: 'calendar',
+    label: 'Calendar',
+    href: 'calendar.html',
+    icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
   },
   {
-    id: 'networth',
-    label: 'Analytics',
-    href: 'networth.html',
-    icon: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+    id: 'envelopes',
+    label: 'Envelopes',
+    href: 'envelopes.html',
+    icon: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
   },
 ];
 

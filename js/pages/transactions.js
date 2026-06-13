@@ -63,10 +63,10 @@ function parseSMS(text) {
     // Merchant / description extraction
     let description = '';
     const merchantPatterns = [
-      /\bat\s+([A-Za-z0-9&@\s\-\/\.]{2,40?}?)(?:\s+(?:on|ref|avl|bal|a\/c|from)|[,\.]|$)/i,
-      /\bto\s+([A-Za-z0-9&@\s\-\/\.]{2,40?}?)(?:\s+(?:on|ref|avl|a\/c)|[,\.]|$)/i,
-      /\bfor\s+([A-Za-z0-9&@\s\-\/\.]{2,40?}?)(?:\s+(?:on|ref|avl|a\/c)|[,\.]|$)/i,
-      /\btowards\s+([A-Za-z0-9&@\s\-\/\.]{2,40?}?)(?:\s+(?:on|ref|avl|a\/c)|[,\.]|$)/i,
+      /\bat\s+([A-Za-z0-9&@\s\-\/\.]{2,40}?)(?:\s+(?:on|ref|avl|bal|a\/c|from)|[,\.]|$)/i,
+      /\bto\s+([A-Za-z0-9&@\s\-\/\.]{2,40}?)(?:\s+(?:on|ref|avl|a\/c)|[,\.]|$)/i,
+      /\bfor\s+([A-Za-z0-9&@\s\-\/\.]{2,40}?)(?:\s+(?:on|ref|avl|a\/c)|[,\.]|$)/i,
+      /\btowards\s+([A-Za-z0-9&@\s\-\/\.]{2,40}?)(?:\s+(?:on|ref|avl|a\/c)|[,\.]|$)/i,
       /UPI\/P2[AM]\/\d+\/([A-Za-z0-9&@\s\-\.]{2,30})/i,
       /VPA:([A-Za-z0-9@\.\-]+)/i,
     ];
@@ -94,11 +94,20 @@ function parseSMS(text) {
 // ── CSV helpers ──────────────────────────────────────────────────
 function splitCSVLine(line) {
   const result = [];
-  let cur = '', inQuote = false;
-  for (const ch of line) {
-    if (ch === '"') { inQuote = !inQuote; }
-    else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
-    else { cur += ch; }
+  let cur = '', inQuote = false, i = 0;
+  while (i < line.length) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuote && line[i + 1] === '"') {
+        cur += '"'; i += 2; // escaped quote ""
+      } else {
+        inQuote = !inQuote; i++;
+      }
+    } else if (ch === ',' && !inQuote) {
+      result.push(cur); cur = ''; i++;
+    } else {
+      cur += ch; i++;
+    }
   }
   result.push(cur);
   return result;
@@ -593,26 +602,23 @@ function renderCSVPreview(previewEl) {
     previewEl.querySelectorAll('.csv-row-check').forEach(cb => { cb.checked = e.target.checked; });
   });
 
-  // Import — imports ALL mapped rows (not just the previewed 10), but
-  // the category overrides only apply to the visible preview rows.
+  // Import — only imports the previewed rows that have their checkbox checked.
   previewEl.querySelector('#csv-import-btn').addEventListener('click', async () => {
-    const checks = previewEl.querySelectorAll('.csv-row-check');
-    const checkedIndices = new Set();
-    checks.forEach((cb) => { if (cb.checked) checkedIndices.add(parseInt(cb.dataset.idx, 10)); });
+    const previewRows = mapped.slice(0, 10);
+    const toImport = [];
+    previewRows.forEach((row, idx) => {
+      const cb = document.querySelector(`[data-csv-row="${idx}"]`) ||
+                 previewEl.querySelector(`.csv-row-check[data-idx="${idx}"]`);
+      if (!cb || !cb.checked) return;
+      const catSel = previewEl.querySelector(`select[name="csv-cat-${idx}"]`);
+      const category = catSel ? catSel.value : row.category;
+      toImport.push(makeTransaction({ ...row, category }, 'csv', bankName));
+    });
 
-    if (!checkedIndices.size) {
+    if (!toImport.length) {
       previewEl.querySelector('#csv-import-status').textContent = 'No rows selected.';
       return;
     }
-
-    // Build the import list: use category override for visible rows, guessed for rest
-    const toImport = mapped.map((r, i) => {
-      if (i < preview.length && !checkedIndices.has(i)) return null;
-      // For rows beyond the preview (i >= 10), always include them when select-all is checked
-      const catSel = previewEl.querySelector(`select[name="csv-cat-${i}"]`);
-      const category = catSel ? catSel.value : r.category;
-      return makeTransaction({ ...r, category }, 'csv', bankName);
-    }).filter(Boolean);
 
     await importTransactions(toImport);
     previewEl.querySelector('#csv-import-status').textContent = `${toImport.length} transaction(s) imported.`;
