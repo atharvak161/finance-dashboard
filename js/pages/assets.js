@@ -760,6 +760,7 @@ function renderROAI(st) {
         start.setFullYear(start.getFullYear() - 5);
         const premGBP = u.currency === 'INR' ? u.monthlyPremium / rate : u.monthlyPremium;
         invested = premGBP * monthsBetween(start, today);
+        if (invested === 0) invested = null;
       }
     }
     rows.push({ name: u.name || 'ULIP', type: 'ULIP', valueGBP: valGBP, invested });
@@ -804,6 +805,7 @@ function renderROAI(st) {
         const start = new Date(lock);
         start.setFullYear(start.getFullYear() - 3);
         invested = (e.monthlyINR / rate) * monthsBetween(start, today);
+        if (invested === 0) invested = null;
       }
     }
     rows.push({ name: e.fund || 'ELSS', type: 'ELSS', valueGBP: valGBP, invested });
@@ -819,7 +821,7 @@ function renderROAI(st) {
   (investments.sgbs || []).forEach(x => {
     if (!x.gramsHeld && !x.series) return;
     const cost = (x.purchasePriceINR || 0) * (x.gramsHeld || 0) / rate;
-    rows.push({ name: x.series || 'SGB', type: 'SGB', valueGBP: cost, invested: cost || null });
+    rows.push({ name: x.series || 'SGB', type: 'SGB', valueGBP: cost, invested: cost > 0 ? cost : null });
   });
 
   const totalValue    = rows.reduce((s, r) => s + r.valueGBP, 0);
