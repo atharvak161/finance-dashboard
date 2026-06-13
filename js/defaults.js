@@ -196,6 +196,7 @@ export const DEFAULTS = {
     theme: 'dark',
     inrGbpRate: 83,
     showInrEquivalents: true,
+    fiscalYearStartMonth: 3,
     nwProjection: {
       pensionGrowthRate: 7,
       careerTransitionDate: '',

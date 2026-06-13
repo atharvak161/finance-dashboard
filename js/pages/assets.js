@@ -21,6 +21,7 @@ document.querySelectorAll('#assets-tabs .tab-btn').forEach(btn => {
   });
 });
 
+renderROAI(state);
 renderTab();
 
 function inv() {
@@ -723,4 +724,171 @@ function wireIndiaSaves(el) {
     _editing = null;
     renderTab();
   });
+}
+
+// ── ROAI — Return on All Investments ──────────────────────────
+
+function renderROAI(st) {
+  const el = document.getElementById('roai-section');
+  if (!el) return;
+
+  const investments = st.investments || {};
+  const rate = (st.settings?.inrGbpRate > 0 ? st.settings.inrGbpRate : 0) || 83;
+  const today = new Date();
+
+  function monthsBetween(a, b) {
+    return Math.max(0, (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()));
+  }
+
+  const rows = [];
+
+  // Pensions
+  (investments.pensions || []).forEach(p => {
+    if (!p.valueGBP && !p.provider) return;
+    rows.push({ name: p.provider || 'Pension', type: 'Pension', valueGBP: p.valueGBP || 0, invested: null });
+  });
+
+  // ULIPs — lock-in is 5 years, start = lockInDate − 5 yr
+  (investments.ulips || []).forEach(u => {
+    if (!u.currentValue && !u.name) return;
+    const valGBP = u.currency === 'INR' ? (u.currentValue || 0) / rate : (u.currentValue || 0);
+    let invested = null;
+    if (u.lockInDate && u.monthlyPremium) {
+      const lock = new Date(u.lockInDate);
+      if (!isNaN(lock)) {
+        const start = new Date(lock);
+        start.setFullYear(start.getFullYear() - 5);
+        const premGBP = u.currency === 'INR' ? u.monthlyPremium / rate : u.monthlyPremium;
+        invested = premGBP * monthsBetween(start, today);
+      }
+    }
+    rows.push({ name: u.name || 'ULIP', type: 'ULIP', valueGBP: valGBP, invested });
+  });
+
+  // Stocks & Shares ISA
+  const ssISA = investments.isa?.stocksAndSharesISA || {};
+  if (ssISA.currentValueGBP || ssISA.annualContributionGBP) {
+    rows.push({
+      name: ssISA.provider || 'S&S ISA', type: 'S&S ISA',
+      valueGBP: ssISA.currentValueGBP || 0,
+      invested: ssISA.annualContributionGBP ? ssISA.annualContributionGBP * 3 : null,
+    });
+  }
+
+  // SIPP
+  const sipp = investments.sipp || {};
+  if (sipp.currentValueGBP || sipp.yearToDateContributionGBP) {
+    const annual = (sipp.yearToDateContributionGBP || 0) + (sipp.employerContributionGBP || 0);
+    rows.push({
+      name: sipp.provider || 'SIPP', type: 'SIPP',
+      valueGBP: sipp.currentValueGBP || 0,
+      invested: annual > 0 ? annual * 3 : null,
+    });
+  }
+
+  // NPS
+  const nps = investments.nps || {};
+  const npsTotal = (nps.tier1ValueINR || 0) + (nps.tier2ValueINR || 0);
+  if (npsTotal) {
+    rows.push({ name: 'NPS', type: 'NPS', valueGBP: npsTotal / rate, invested: null });
+  }
+
+  // ELSS — lock-in is 3 years, start = lockInDate − 3 yr
+  (investments.elss || []).forEach(e => {
+    if (!e.currentValueINR && !e.fund) return;
+    const valGBP = (e.currentValueINR || 0) / rate;
+    let invested = null;
+    if (e.lockInDate && e.monthlyINR) {
+      const lock = new Date(e.lockInDate);
+      if (!isNaN(lock)) {
+        const start = new Date(lock);
+        start.setFullYear(start.getFullYear() - 3);
+        invested = (e.monthlyINR / rate) * monthsBetween(start, today);
+      }
+    }
+    rows.push({ name: e.fund || 'ELSS', type: 'ELSS', valueGBP: valGBP, invested });
+  });
+
+  // PPF
+  const ppf = investments.ppf || {};
+  if (ppf.currentValueINR) {
+    rows.push({ name: 'PPF', type: 'PPF', valueGBP: ppf.currentValueINR / rate, invested: null });
+  }
+
+  // SGBs — cost basis = purchase price (no gain unless interest)
+  (investments.sgbs || []).forEach(x => {
+    if (!x.gramsHeld && !x.series) return;
+    const cost = (x.purchasePriceINR || 0) * (x.gramsHeld || 0) / rate;
+    rows.push({ name: x.series || 'SGB', type: 'SGB', valueGBP: cost, invested: cost || null });
+  });
+
+  const totalValue    = rows.reduce((s, r) => s + r.valueGBP, 0);
+  const invRows       = rows.filter(r => r.invested !== null);
+  const totalInvested = invRows.reduce((s, r) => s + r.invested, 0);
+  const hasInv        = invRows.length > 0 && totalInvested > 0;
+  const totalGain     = hasInv ? totalValue - totalInvested : 0;
+  const overallPct    = hasInv ? (totalGain / totalInvested) * 100 : null;
+
+  function badge(pct) {
+    if (pct === null) return '<span class="roai-badge-na">N/A</span>';
+    const cls = pct >= 10 ? 'roai-badge-green' : pct >= 0 ? 'roai-badge-amber' : 'roai-badge-red';
+    return `<span class="${cls}">${pct.toFixed(1)}%</span>`;
+  }
+
+  function rowBadge(r) {
+    if (r.invested === null || r.invested === 0) return '<span class="roai-badge-na">N/A</span>';
+    return badge(((r.valueGBP - r.invested) / r.invested) * 100);
+  }
+
+  function gainCell(r) {
+    if (r.invested === null) return '<span class="roai-neutral">—</span>';
+    const g = r.valueGBP - r.invested;
+    return `<span class="${g >= 0 ? 'roai-positive' : 'roai-negative'}">${g >= 0 ? '+' : '-'}${fmtGBP(Math.abs(g))}</span>`;
+  }
+
+  const gainSign  = totalGain >= 0 ? '+' : '-';
+  const gainClass = totalGain >= 0 ? 'roai-positive' : 'roai-negative';
+
+  el.innerHTML = `
+    <div class="panel" style="margin-bottom:24px">
+      <div class="panel-header"><span class="panel-title">Return on All Investments (ROAI)</span></div>
+      <div class="roai-summary-grid">
+        <div class="panel" style="padding:16px">
+          <div class="stat-label">Portfolio Value</div>
+          <div class="stat-value mono" style="margin-top:6px">${fmtGBP(totalValue)}</div>
+        </div>
+        <div class="panel" style="padding:16px">
+          <div class="stat-label">Est. Invested</div>
+          <div class="stat-value mono" style="margin-top:6px">${hasInv ? fmtGBP(totalInvested) : '—'}</div>
+        </div>
+        <div class="panel" style="padding:16px">
+          <div class="stat-label">Total Gain</div>
+          <div class="stat-value ${gainClass}" style="margin-top:6px">${hasInv ? gainSign + fmtGBP(Math.abs(totalGain)) : '—'}</div>
+        </div>
+        <div class="panel" style="padding:16px">
+          <div class="stat-label">Overall ROAI</div>
+          <div style="margin-top:8px">${badge(overallPct)}</div>
+        </div>
+      </div>
+      <table class="roai-table">
+        <thead><tr>
+          <th>Investment</th><th>Type</th>
+          <th class="td-right">Value (£)</th>
+          <th class="td-right">Est. Invested</th>
+          <th class="td-right">Gain / Loss</th>
+          <th class="td-right">ROAI %</th>
+        </tr></thead>
+        <tbody>
+          ${rows.length ? rows.map(r => `<tr>
+            <td>${r.name}</td>
+            <td style="font-size:11px;color:var(--text-muted)">${r.type}</td>
+            <td class="td-right mono">${fmtGBP(r.valueGBP)}</td>
+            <td class="td-right mono">${r.invested !== null ? fmtGBP(r.invested) : '<span class="roai-neutral">—</span>'}</td>
+            <td class="td-right">${gainCell(r)}</td>
+            <td class="td-right">${rowBadge(r)}</td>
+          </tr>`).join('') : `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">No investment data yet — add assets in the tabs below.</td></tr>`}
+        </tbody>
+      </table>
+      <p style="margin-top:14px;font-size:12px;color:var(--text-muted);font-style:italic">Invested amounts are estimates — actual ROAI may differ.</p>
+    </div>`;
 }

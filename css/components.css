@@ -694,6 +694,56 @@ textarea.form-input { font-family:var(--font-body); resize:vertical; min-height:
 }
 .form-check-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #ff9100; cursor: pointer; }
 
+/* ── ROAI — Return on Average Investment ────────────────────── */
+.roai-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+@media (max-width: 900px) {
+  .roai-summary-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  .roai-summary-grid { grid-template-columns: 1fr; }
+}
+
+.roai-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.roai-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(0,191,255,0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(0,191,255,0.15);
+  white-space: nowrap;
+}
+.roai-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(0,191,255,0.06);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+.roai-table tr:last-child td { border-bottom: none; }
+.roai-table tr:hover td { background: rgba(0,191,255,0.04); }
+.roai-table .mono { font-family: var(--font-mono); }
+.roai-table .td-right { text-align: right; }
+
+.roai-positive { color: var(--color-positive); font-family: var(--font-mono); }
+.roai-negative { color: var(--color-negative); font-family: var(--font-mono); }
+.roai-neutral  { color: var(--text-muted);     font-family: var(--font-mono); }
+
+.roai-badge-green  { background: rgba(0,230,118,0.12);  color: var(--color-positive); padding: 2px 7px; border-radius: 10px; font-size: 11.5px; font-family: var(--font-mono); font-weight: 600; }
+.roai-badge-amber  { background: rgba(255,145,0,0.12);  color: var(--color-warning);  padding: 2px 7px; border-radius: 10px; font-size: 11.5px; font-family: var(--font-mono); font-weight: 600; }
+.roai-badge-red    { background: rgba(255,23,68,0.12);   color: var(--color-negative); padding: 2px 7px; border-radius: 10px; font-size: 11.5px; font-family: var(--font-mono); font-weight: 600; }
+.roai-badge-na     { background: rgba(0,191,255,0.06);  color: var(--text-muted);     padding: 2px 7px; border-radius: 10px; font-size: 11.5px; font-family: var(--font-mono); }
+
 /* ── Spending Heat Map ──────────────────────────────────────── */
 .heat-map-wrap {
   overflow-x: auto;
