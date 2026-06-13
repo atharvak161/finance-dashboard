@@ -261,6 +261,22 @@
   .content { padding-bottom: 72px !important; }
 }
 
+/* ── Privacy mode ────────────────────────── */
+.privacy-mode .metric-lg,
+.privacy-mode .metric-md,
+.privacy-mode .metric-sm,
+.privacy-mode .value,
+.privacy-mode .metric-card .value,
+.privacy-mode .commitment-amount,
+.privacy-mode .metric-delta {
+  color: transparent !important;
+  text-shadow: 0 0 10px rgba(0, 191, 255, 0.6);
+  user-select: none;
+}
+.privacy-mode #privacy-toggle-btn {
+  color: var(--color-warning);
+}
+
 /* ── Mobile navigation ───────────────────── */
 .mobile-nav-toggle {
   display: none;

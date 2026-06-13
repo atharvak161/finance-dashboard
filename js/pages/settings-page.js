@@ -387,6 +387,18 @@ function renderDisplay(content) {
       state.profile.inrGbpRate = v;
     });
   }, 0);
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const currentFY = s.fiscalYearStartMonth ?? 3;
+  const fyOptions = MONTH_NAMES.map((name, i) =>
+    `<option value="${i}" ${i === currentFY ? 'selected' : ''}>${name}</option>`
+  ).join('');
+  setTimeout(() => {
+    const fyEl = document.getElementById('setting-fiscal-year-start');
+    if (!fyEl) return;
+    fyEl.addEventListener('change', () => {
+      s.fiscalYearStartMonth = parseInt(fyEl.value, 10);
+    });
+  }, 0);
   content.innerHTML = `<div class="panel"><div class="panel-title" style="margin-bottom:20px">Display</div>
     <div class="grid-2">
       <div class="form-group" style="margin-bottom:14px">
@@ -399,6 +411,10 @@ function renderDisplay(content) {
       </div>
       ${field('Inactivity timeout (minutes)','number',   s.inactivityTimeoutMinutes,  v=>{s.inactivityTimeoutMinutes=v;})}
       ${field('Show INR equivalents',        'checkbox', s.showInrEquivalents,        v=>{s.showInrEquivalents=v;})}
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">Financial year starts</label>
+        <select id="setting-fiscal-year-start" class="form-input">${fyOptions}</select>
+      </div>
     </div>
     ${saveButtonHtml()}
   </div>`;

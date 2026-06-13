@@ -50,6 +50,31 @@ function highlightEmptyData(state) {
   }
 }
 
+// ── Inline expression evaluator ───────────────────────────────
+function safeEval(expr) {
+  // Allow only digits, decimal points, operators, parentheses, and whitespace
+  if (!/^[\d\s.+\-*/()]+$/.test(expr)) return null;
+  try {
+    // eslint-disable-next-line no-new-func
+    const result = Function('return (' + expr + ')')();
+    if (typeof result !== 'number' || !isFinite(result)) return null;
+    // Round to 2 decimal places only if needed
+    return Math.round(result * 100) / 100;
+  } catch {
+    return null;
+  }
+}
+
+document.addEventListener('blur', function(e) {
+  const el = e.target;
+  if (!el.matches('input[type="text"].form-input, input[type="number"].form-input, .form-input-inline')) return;
+  const raw = el.value.trim();
+  // Only process if it contains math operators
+  if (!/[+\-*/()]/.test(raw)) return;
+  const result = safeEval(raw);
+  if (result !== null) el.value = result;
+}, true); // capture phase so it fires before page handlers
+
 export async function initPage(activeNav) {
   await initSW();
   const state = await loadAll();

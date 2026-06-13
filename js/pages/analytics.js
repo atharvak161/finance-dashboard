@@ -112,6 +112,7 @@ function render(st) {
   renderSurplusTrajectoryChart(st);
   renderSpendHeatmap(st);
   renderBudgetRadarChart(st);
+  renderYoYChart(st);
 }
 
 function kpiCard(label, value, colorClass, benchmarkLabel, statusText) {
@@ -454,6 +455,156 @@ function renderBudgetRadarChart(st) {
       scales: { r: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 10 }, backdropColor: 'transparent', callback: v => '£' + v }, pointLabels: { color: '#d9dde2', font: { size: 11 } }, angleLines: { color: C.grid } } },
     },
   });
+}
+
+// ── Year-over-Year Budget Comparison ─────────────────────────
+
+function renderYoYChart(st) {
+  const section = document.getElementById('yoy-chart-section');
+  const titleEl = document.getElementById('yoy-chart-title');
+  const toggleEl = document.getElementById('yoy-toggle-btns');
+  if (!section || !titleEl || !toggleEl) return;
+
+  const log = st.monthlyLog || [];
+
+  if (log.length < 2) {
+    section.querySelector('.chart-wrap').innerHTML =
+      '<div class="empty-state">Add monthly snapshots to see year-over-year trends.</div>';
+    titleEl.textContent = 'Year-over-Year';
+    toggleEl.innerHTML = '';
+    return;
+  }
+
+  // Fiscal year config
+  const fyStart = (st.settings?.fiscalYearStartMonth ?? 3); // 0=Jan … 11=Dec, default 3=Apr
+
+  // Determine current month from today
+  const today = new Date();
+  const curYear = today.getFullYear();
+  const curMonth = today.getMonth(); // 0-based
+
+  // Build a Date for each log entry by working backwards from today
+  const indexed = log.map((entry, i) => {
+    const monthsAgo = log.length - 1 - i;
+    const d = new Date(curYear, curMonth - monthsAgo, 1);
+    return { entry, year: d.getFullYear(), month: d.getMonth() };
+  });
+
+  // Determine "this" fiscal year boundaries
+  // FY starts on fyStart month. If curMonth >= fyStart, FY started this calendar year.
+  // Otherwise FY started last calendar year.
+  const fyThisStart = curMonth >= fyStart
+    ? new Date(curYear, fyStart, 1)
+    : new Date(curYear - 1, fyStart, 1);
+  const fyThisEnd = new Date(fyThisStart.getFullYear() + 1, fyStart, 1); // exclusive
+
+  const fyLastStart = new Date(fyThisStart.getFullYear() - 1, fyStart, 1);
+  const fyLastEnd = fyThisStart; // exclusive
+
+  // Build ordered month labels for a fiscal year (fyStart … fyStart+11)
+  const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fyMonths = Array.from({ length: 12 }, (_, i) => (fyStart + i) % 12);
+  const labels = fyMonths.map(m => MONTH_ABBR[m]);
+
+  // Helper: given calendar year + month, which FY slot index (0-11)?
+  function fySlot(year, month) {
+    // offset from fyStart, mod 12
+    const offset = (month - fyStart + 12) % 12;
+    return offset;
+  }
+
+  // Classify entries into this FY and last FY
+  const thisIncome   = new Array(12).fill(0);
+  const thisExpenses = new Array(12).fill(0);
+  const lastIncome   = new Array(12).fill(0);
+  const lastExpenses = new Array(12).fill(0);
+
+  for (const { entry, year, month } of indexed) {
+    const ts = new Date(year, month, 1).getTime();
+    const slot = fySlot(year, month);
+    if (ts >= fyThisStart.getTime() && ts < fyThisEnd.getTime()) {
+      thisIncome[slot]   += (entry.netGBP || 0);
+      thisExpenses[slot] += (entry.expensesGBP || 0);
+    } else if (ts >= fyLastStart.getTime() && ts < fyLastEnd.getTime()) {
+      lastIncome[slot]   += (entry.netGBP || 0);
+      lastExpenses[slot] += (entry.expensesGBP || 0);
+    }
+  }
+
+  // FY label strings e.g. "FY2025–26"
+  const fyLabel = (startDate) => {
+    const y = startDate.getFullYear();
+    return `FY${y}–${String(y + 1).slice(-2)}`;
+  };
+  const thisLabel = fyLabel(fyThisStart);
+  const lastLabel = fyLabel(fyLastStart);
+  titleEl.textContent = `Year-over-Year: ${thisLabel} vs ${lastLabel}`;
+
+  // Dataset definitions — visibility toggled by buttons
+  const CYAN  = '#00bfff';
+  const RED   = '#ff1744';
+  const datasets = [
+    { label: `Income ${thisLabel}`,   data: thisIncome,   backgroundColor: CYAN + 'cc',  borderColor: CYAN,  borderWidth: 1, borderRadius: 3, group: 'income' },
+    { label: `Income ${lastLabel}`,   data: lastIncome,   backgroundColor: CYAN + '66',  borderColor: CYAN + '88', borderWidth: 1, borderRadius: 3, group: 'income' },
+    { label: `Expenses ${thisLabel}`, data: thisExpenses, backgroundColor: RED  + 'cc',  borderColor: RED,   borderWidth: 1, borderRadius: 3, group: 'expenses' },
+    { label: `Expenses ${lastLabel}`, data: lastExpenses, backgroundColor: RED  + '66',  borderColor: RED  + '88', borderWidth: 1, borderRadius: 3, group: 'expenses' },
+  ];
+
+  // Destroy previous chart instance if present
+  if (charts['yoy-chart']) { charts['yoy-chart'].destroy(); delete charts['yoy-chart']; }
+
+  // Clear canvas placeholder
+  section.querySelector('.chart-wrap').innerHTML = '<canvas id="yoy-chart"></canvas>';
+  const ctx = document.getElementById('yoy-chart')?.getContext('2d');
+  if (!ctx) return;
+
+  charts['yoy-chart'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 700, easing: 'easeInOutQuart' },
+      plugins: {
+        legend: { display: true, labels: { color: C.tick, boxWidth: 10, font: { size: 11 } } },
+        tooltip: { backgroundColor: '#252830', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#d9dde2', bodyColor: '#8e9099', padding: 10,
+          callbacks: { label: item => ` £${Math.round(item.raw).toLocaleString()} — ${item.dataset.label}` }
+        },
+      },
+      scales: {
+        x: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 } } },
+        y: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, callback: v => '£' + v } },
+      },
+    },
+  });
+
+  // Toggle buttons
+  let activeGroup = 'both';
+  const applyToggle = (group) => {
+    activeGroup = group;
+    const chart = charts['yoy-chart'];
+    if (!chart) return;
+    chart.data.datasets.forEach((ds, i) => {
+      const show = group === 'both' || ds.group === group;
+      chart.setDatasetVisibility(i, show);
+    });
+    chart.update();
+    toggleEl.querySelectorAll('button').forEach(b => {
+      b.style.opacity = b.dataset.group === group ? '1' : '0.45';
+      b.style.borderColor = b.dataset.group === group ? CYAN : 'rgba(255,255,255,0.15)';
+    });
+  };
+
+  const btnStyle = `style="padding:4px 12px;font-size:11px;font-family:var(--font-mono);background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:4px;cursor:pointer;color:var(--text-primary);transition:opacity 0.15s"`;
+  toggleEl.innerHTML = `
+    <button data-group="income"   ${btnStyle}>Income</button>
+    <button data-group="expenses" ${btnStyle}>Expenses</button>
+    <button data-group="both"     ${btnStyle}>Both</button>
+  `;
+  toggleEl.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => applyToggle(btn.dataset.group));
+  });
+  applyToggle('both');
 }
 
 function renderRatiosChart({ savingsRate, housingRatio, investRate, debtIncome }) {
