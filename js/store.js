@@ -8,7 +8,8 @@ const KEYS = [
   'fin_investments','fin_goals','fin_monthly_log',
   'fin_settings','fin_tax_tracker','fin_india_log','fin_india_tax',
   'fin_ot_shifts','fin_ot_monthly_summary',
-  'fin_transactions'
+  'fin_transactions',
+  'fin_envelopes'
 ];
 
 // Multi-word keys are stored snake_case in localStorage but consumed

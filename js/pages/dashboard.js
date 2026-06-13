@@ -340,6 +340,37 @@ function renderOverview(host, st) {
     </div>` : '';
 
   host.innerHTML = `
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-header">
+        <span class="panel-title">Cash Flow Status</span>
+        <span class="panel-title-total" style="font-size:12px;color:var(--text-muted)">Monthly income vs outgoings</span>
+      </div>
+      <div style="margin:12px 0 6px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span class="stat-label">Income <span class="mono" style="color:var(--color-positive)">${fmtGBP(pay.netWithOT)}</span></span>
+          <span class="stat-label">Expenses <span class="mono" style="color:var(--color-warning)">${fmtGBP(totalExp)}</span></span>
+        </div>
+        <!-- Income bar (always full width) -->
+        <div style="position:relative;height:18px;background:rgba(0,230,118,0.10);border-radius:4px;overflow:hidden;margin-bottom:6px">
+          <div style="width:100%;height:100%;background:rgba(0,230,118,0.30);border-radius:4px"></div>
+        </div>
+        <!-- Expenses bar (proportional) -->
+        <div style="position:relative;height:18px;background:rgba(255,145,0,0.06);border-radius:4px;overflow:hidden">
+          <div style="width:${Math.min(pay.netWithOT > 0 ? round2((totalExp/pay.netWithOT)*100) : 100, 100)}%;height:100%;background:${totalExp > pay.netWithOT ? 'rgba(255,23,68,0.40)' : 'rgba(255,145,0,0.30)'};border-radius:4px;transition:width 0.6s"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:12px;flex-wrap:wrap">
+        <span class="stat-label">Net cash flow:</span>
+        <span class="stat-value mono ${surplus >= 0 ? 'text-positive' : 'text-negative'}" style="font-size:20px">${surplus >= 0 ? '+' : ''}${fmtGBP(surplus)}</span>
+        ${surplus > 0
+          ? '<span class="badge badge-positive">Surplus</span>'
+          : surplus < 0
+            ? '<span class="badge badge-negative">Deficit</span>'
+            : '<span class="badge badge-warning">Balanced</span>'}
+        <span class="label-muted" style="margin-left:auto">${pay.netWithOT > 0 ? round2((totalExp/pay.netWithOT)*100).toFixed(1) : 0}% of income spent</span>
+      </div>
+    </div>
+
     <div class="grid-4" data-section="income">
       ${metricCard('Net Worth', fmtGBP(nw.netWorth), nw.netWorth >= 0 ? 'positive' : 'negative', `Assets ${fmtGBP(nw.totalAssets)} · Debt ${fmtGBP(nw.totalDebts)}`, 'spk-networth', buildDeltaGBP(nw.netWorth, prevNetWorth))}
       ${metricCard('Take-Home (w/ OT)', fmtGBP(pay.netWithOT), 'info', `Base ${fmtGBP(pay.netBase)} /mo`, 'spk-income', buildDeltaGBP(pay.netWithOT, prevNetPay))}

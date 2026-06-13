@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance Dashboard — Envelopes</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <div class="content page-content" id="content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Envelopes</div>
+          <div class="section-subtitle">Allocate income to buckets before spending</div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="env-add-btn">+ Add Envelope</button>
+      </div>
+      <div id="env-content"></div>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/pages/envelopes.js"></script>
+</body>
+</html>

@@ -313,4 +313,9 @@ export const DEFAULTS = {
   fin_transactions: {
     items: [],
   },
+
+  fin_envelopes: {
+    month: '',
+    envelopes: [],
+  },
 };
