@@ -113,6 +113,7 @@ function render(st) {
   renderSpendHeatmap(st);
   renderBudgetRadarChart(st);
   renderYoYChart(st);
+  renderPeriodComparison(st);
 }
 
 function kpiCard(label, value, colorClass, benchmarkLabel, statusText) {
@@ -605,6 +606,115 @@ function renderYoYChart(st) {
     btn.addEventListener('click', () => applyToggle(btn.dataset.group));
   });
   applyToggle('both');
+}
+
+function renderPeriodComparison(st) {
+  const el = document.getElementById('period-comparison');
+  if (!el) return;
+
+  const log = st.monthlyLog || [];
+  const inc = st.income || {};
+  const pay = calculateNetPay(inc);
+  const effItems = applyScheduledChanges(st.expenses || { items:[], scheduledChanges:[] });
+  const totalExp = totalExpenses(effItems);
+  const nw = calculateNetWorth(st.investments || {}, st.debts || {}, st.settings?.inrGbpRate || 83);
+  const surplus = calculateSurplus(pay.netWithOT, totalExp);
+  const savRate = pay.netWithOT > 0 ? round2((surplus / pay.netWithOT) * 100) : 0;
+
+  const now = new Date();
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const lastMonthKey = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth()+1).padStart(2,'0')}`;
+  const sameLastYearKey = `${now.getFullYear()-1}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  const lastM = log.find(r => r.month === lastMonthKey) || null;
+  const lastY = log.find(r => r.month === sameLastYearKey) || null;
+
+  function logNet(entry)  { return entry?.netGBP || 0; }
+  function logExp(entry)  { return entry ? (entry.netGBP || 0) - (entry.savedGBP || 0) : 0; }
+  function logSav(entry)  { return entry?.savedGBP || 0; }
+  function logRate(entry) { return entry && entry.netGBP > 0 ? round2((entry.savedGBP / entry.netGBP) * 100) : 0; }
+
+  function delta(curr, prev, higherIsBetter = true) {
+    if (prev === null || prev === 0) return '';
+    const diff = curr - prev;
+    if (Math.abs(diff) < 0.01) return '<span class="label-muted">—</span>';
+    const up = diff > 0;
+    const good = higherIsBetter ? up : !up;
+    const cls = good ? 'roai-positive' : 'roai-negative';
+    const arrow = up ? '▲' : '▼';
+    return `<span class="${cls}">${arrow} ${fmtGBP(Math.abs(diff))}</span>`;
+  }
+
+  function pctDelta(curr, prev, higherIsBetter = true) {
+    if (prev === null) return '';
+    const diff = curr - prev;
+    if (Math.abs(diff) < 0.1) return '<span class="label-muted">—</span>';
+    const up = diff > 0;
+    const good = higherIsBetter ? up : !up;
+    const cls = good ? 'roai-positive' : 'roai-negative';
+    const arrow = up ? '▲' : '▼';
+    return `<span class="${cls}">${arrow} ${Math.abs(diff).toFixed(1)}pp</span>`;
+  }
+
+  const noData = (entry, label) => entry ? label : '<span class="label-muted">No log</span>';
+
+  el.innerHTML = `
+    <div class="panel-header"><span class="panel-title">Period Comparison</span><span class="label-muted" style="font-size:12px">This month vs last month vs same month last year</span></div>
+    <div style="overflow-x:auto">
+      <table class="data-table" style="min-width:580px">
+        <thead><tr>
+          <th>Metric</th>
+          <th class="td-right">This Month</th>
+          <th class="td-right">Last Month${lastM ? ` <span class="label-muted" style="font-size:10px">(${lastMonthKey})</span>` : ''}</th>
+          <th class="td-right">vs Last Mo</th>
+          <th class="td-right">Same Mo Last Yr${lastY ? ` <span class="label-muted" style="font-size:10px">(${sameLastYearKey})</span>` : ''}</th>
+          <th class="td-right">vs Last Yr</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>Net Pay</td>
+            <td class="td-right mono">${fmtGBP(pay.netWithOT)}</td>
+            <td class="td-right mono">${noData(lastM, fmtGBP(logNet(lastM)))}</td>
+            <td class="td-right">${lastM ? delta(pay.netWithOT, logNet(lastM)) : ''}</td>
+            <td class="td-right mono">${noData(lastY, fmtGBP(logNet(lastY)))}</td>
+            <td class="td-right">${lastY ? delta(pay.netWithOT, logNet(lastY)) : ''}</td>
+          </tr>
+          <tr>
+            <td>Expenses</td>
+            <td class="td-right mono">${fmtGBP(totalExp)}</td>
+            <td class="td-right mono">${noData(lastM, fmtGBP(logExp(lastM)))}</td>
+            <td class="td-right">${lastM ? delta(totalExp, logExp(lastM), false) : ''}</td>
+            <td class="td-right mono">${noData(lastY, fmtGBP(logExp(lastY)))}</td>
+            <td class="td-right">${lastY ? delta(totalExp, logExp(lastY), false) : ''}</td>
+          </tr>
+          <tr>
+            <td>Savings</td>
+            <td class="td-right mono">${fmtGBP(surplus)}</td>
+            <td class="td-right mono">${noData(lastM, fmtGBP(logSav(lastM)))}</td>
+            <td class="td-right">${lastM ? delta(surplus, logSav(lastM)) : ''}</td>
+            <td class="td-right mono">${noData(lastY, fmtGBP(logSav(lastY)))}</td>
+            <td class="td-right">${lastY ? delta(surplus, logSav(lastY)) : ''}</td>
+          </tr>
+          <tr>
+            <td>Savings Rate</td>
+            <td class="td-right mono">${savRate.toFixed(1)}%</td>
+            <td class="td-right mono">${noData(lastM, logRate(lastM).toFixed(1)+'%')}</td>
+            <td class="td-right">${lastM ? pctDelta(savRate, logRate(lastM)) : ''}</td>
+            <td class="td-right mono">${noData(lastY, logRate(lastY).toFixed(1)+'%')}</td>
+            <td class="td-right">${lastY ? pctDelta(savRate, logRate(lastY)) : ''}</td>
+          </tr>
+          <tr>
+            <td>Net Worth</td>
+            <td class="td-right mono">${fmtGBP(nw.netWorth)}</td>
+            <td class="td-right mono">${noData(lastM, lastM?.netWorthGBP ? fmtGBP(lastM.netWorthGBP) : '<span class="label-muted">—</span>')}</td>
+            <td class="td-right">${lastM?.netWorthGBP ? delta(nw.netWorth, lastM.netWorthGBP) : ''}</td>
+            <td class="td-right mono">${noData(lastY, lastY?.netWorthGBP ? fmtGBP(lastY.netWorthGBP) : '<span class="label-muted">—</span>')}</td>
+            <td class="td-right">${lastY?.netWorthGBP ? delta(nw.netWorth, lastY.netWorthGBP) : ''}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:12px;font-size:11px;color:var(--text-muted)">Log entries come from the Income tab → Save Monthly Log. Entries without a log show "No log".</p>`;
 }
 
 function renderRatiosChart({ savingsRate, housingRatio, investRate, debtIncome }) {

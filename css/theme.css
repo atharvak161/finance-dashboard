@@ -105,3 +105,12 @@ a { color:var(--text-link); text-decoration:none; }
 a:hover { color:var(--color-cyan); }
 
 .divider { border:none; border-top:1px solid var(--border-weak); margin:12px 0; }
+
+/* ── OLED dark mode — pure black backgrounds ─────────────── */
+body.oled {
+  --bg-canvas:      #000000;
+  --bg-surface:     #000000;
+  --bg-panel:       #0a0a0a;
+  --bg-panel-hover: #111111;
+  --bg-input:       #000000;
+}
