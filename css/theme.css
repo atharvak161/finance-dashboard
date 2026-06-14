@@ -107,7 +107,7 @@ a:hover { color:var(--color-cyan); }
 .divider { border:none; border-top:1px solid var(--border-weak); margin:12px 0; }
 
 /* ── OLED dark mode — pure black backgrounds ─────────────── */
-body.oled {
+body.oled, html.oled body {
   --bg-canvas:      #000000;
   --bg-surface:     #000000;
   --bg-panel:       #0a0a0a;

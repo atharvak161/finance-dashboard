@@ -29,10 +29,11 @@ function render() {
   document.getElementById('cal-month-label').textContent = monthName;
 
   // Group items by dayOfMonth (default 1)
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const byDay = {};
   let totalMonthly = 0;
   for (const item of activeItems) {
-    const day = Math.min(Math.max(parseInt(item.dayOfMonth) || 1, 1), 28); // cap at 28 to avoid invalid dates
+    const day = Math.min(Math.max(parseInt(item.dayOfMonth) || 1, 1), daysInMonth); // cap at actual days in month
     if (!byDay[day]) byDay[day] = [];
     byDay[day].push(item);
     totalMonthly += item.monthlyGBP || 0;
@@ -76,7 +77,7 @@ function render() {
       <td class="td-right mono">${fmtGBP(item.monthlyGBP||0)}</td>
       <td class="td-right">
         <input type="number" class="form-input" style="width:60px;padding:4px;font-size:12px;text-align:center"
-          min="1" max="28" value="${item.dayOfMonth || 1}"
+          min="1" max="${daysInMonth}" value="${item.dayOfMonth || 1}"
           data-item-id="${item.id}"
           title="Day of month this bill is due" />
       </td>
@@ -96,7 +97,7 @@ function render() {
     </div>
 
     <div class="panel">
-      <div class="panel-header"><span class="panel-title">Bill Schedule</span><span class="label-muted">Set the day each bill is due (1–28)</span></div>
+      <div class="panel-header"><span class="panel-title">Bill Schedule</span><span class="label-muted">Set the day each bill is due (1–31)</span></div>
       ${activeItems.length ? `<table class="data-table">
         <thead><tr><th>Bill</th><th>Category</th><th class="td-right">Monthly</th><th class="td-right">Due day</th></tr></thead>
         <tbody>${summaryRows}</tbody>
@@ -108,14 +109,15 @@ function render() {
   document.querySelectorAll('[data-item-id]').forEach(input => {
     input.addEventListener('change', async () => {
       const id = input.dataset.itemId;
-      const day = Math.min(Math.max(parseInt(input.value) || 1, 1), 28);
+      const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+      const day = Math.min(Math.max(parseInt(input.value) || 1, 1), daysInMonth);
       input.value = day;
       const item = (state.expenses?.items || []).find(i => i.id === id);
       if (item) {
         item.dayOfMonth = day;
         clearTimeout(_calSaveTimer);
         _calSaveTimer = setTimeout(async () => {
-          await saveSec('fin_expenses', state.expenses);
+          await saveSec('fin_expenses', state.expenses || { items: [], scheduledChanges: [] });
           render(); // re-render calendar with updated positions
         }, 400);
       }

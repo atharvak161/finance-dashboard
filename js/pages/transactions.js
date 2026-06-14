@@ -13,6 +13,8 @@ let smsParsed = [];
 let csvParsed = { format: 'generic', headers: [], dataRows: [] };
 // Generic CSV column mapping (indices)
 let csvMap = { date: 0, description: 1, amount: 2, currency: -1 };
+// Date format for CSV parsing ('dmy' = DD/MM/YYYY, 'mdy' = MM/DD/YYYY)
+let csvDateFmt = 'dmy';
 
 // ── Category guesser ────────────────────────────────────────────
 function guessCategory(desc) {
@@ -32,7 +34,7 @@ function guessCategory(desc) {
 // ── SMS parser ───────────────────────────────────────────────────
 function parseSMS(text) {
   const results = [];
-  const messages = text.split(/\n{2,}|\r\n{2,}/).map(s => s.trim()).filter(Boolean);
+  const messages = text.split(/(?:\r?\n){2,}/).map(s => s.trim()).filter(Boolean);
 
   for (const msg of messages) {
     // Amount
@@ -42,8 +44,12 @@ function parseSMS(text) {
     if (!amount || isNaN(amount)) continue;
 
     // Debit or credit
-    const isDebit = /\b(?:debited?|spent|paid|transfer(?:red)?\s+to|withdrawn|purchase)\b/i.test(msg);
-    const isCredit = /\b(?:credited?|received|transfer(?:red)?\s+from|refund)\b/i.test(msg);
+    let isDebit = /\b(?:debited?|spent|paid|transfer(?:red)?\s+to|withdrawn|purchase)\b/i.test(msg);
+    let isCredit = /\b(?:credited?|received|transfer(?:red)?\s+from|refund)\b/i.test(msg);
+    if (isDebit && isCredit) {
+      // Credit signal wins (refunds/reversals contain both; credit is the new info)
+      isDebit = false;
+    }
     if (!isDebit && !isCredit) continue;
 
     // Bank detection
@@ -130,42 +136,49 @@ function parseCSV(text) {
   return { format, headers, dataRows };
 }
 
-function normaliseDate(str) {
+function normaliseDate(str, format = 'dmy') {
   if (!str) return new Date().toISOString().slice(0,10);
   const iso = str.match(/(\d{4})-(\d{2})-(\d{2})/);
   if (iso) return iso[0];
-  // UK format DD/MM/YYYY
-  const uk = str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-  if (uk) return `${uk[3]}-${uk[2].padStart(2,'0')}-${uk[1].padStart(2,'0')}`;
+  const parts = str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (parts) {
+    const [, p1, p2, yr] = parts;
+    if (format === 'mdy') {
+      // MM/DD/YYYY (US) — first=month, second=day
+      return `${yr}-${p1.padStart(2,'0')}-${p2.padStart(2,'0')}`;
+    }
+    // DD/MM/YYYY (UK/EU default) — first=day, second=month
+    return `${yr}-${p2.padStart(2,'0')}-${p1.padStart(2,'0')}`;
+  }
   return new Date().toISOString().slice(0,10);
 }
 
-function mapRevolutRow(headers, row) {
+function mapRevolutRow(headers, row, fmt = 'dmy') {
   const get = (name) => row[headers.indexOf(name)] || '';
   const dateStr = get('started date') || get('completed date') || get('date');
   const desc = get('description');
   const amt = parseFloat(get('amount')) || 0;
   const currency = get('currency') || 'GBP';
-  return { date: normaliseDate(dateStr), description: desc, amount: Math.abs(amt), isDebit: amt < 0, currency, category: guessCategory(desc) };
+  return { date: normaliseDate(dateStr, fmt), description: desc, amount: Math.abs(amt), isDebit: amt < 0, currency, category: guessCategory(desc) };
 }
 
-function mapMonzoRow(headers, row) {
+function mapMonzoRow(headers, row, fmt = 'dmy') {
   const get = (name) => row[headers.indexOf(name)] || '';
   const dateStr = get('date') + ' ' + (get('time') || '');
   const desc = get('name') || get('description') || '';
   const amt = parseFloat(get('amount')) || 0;
   const currency = get('currency') || 'GBP';
-  return { date: normaliseDate(dateStr), description: desc, amount: Math.abs(amt), isDebit: amt < 0, currency, category: get('category') || guessCategory(desc) };
+  return { date: normaliseDate(dateStr, fmt), description: desc, amount: Math.abs(amt), isDebit: amt < 0, currency, category: get('category') || guessCategory(desc) };
 }
 
-function mapGenericRow(headers, row, map) {
+function mapGenericRow(headers, row, map, fmt = 'dmy') {
   const get = (idx) => (idx >= 0 && idx < row.length) ? row[idx] : '';
   const dateStr = get(map.date);
   const desc = get(map.description);
   const rawAmt = get(map.amount).replace(/[£$€,\s]/g, '');
   const amt = parseFloat(rawAmt) || 0;
   const currency = map.currency >= 0 ? (get(map.currency) || 'GBP') : 'GBP';
-  return { date: normaliseDate(dateStr), description: desc, amount: Math.abs(amt), isDebit: amt < 0, currency, category: guessCategory(desc) };
+  return { date: normaliseDate(dateStr, fmt), description: desc, amount: Math.abs(amt), isDebit: amt < 0, currency, category: guessCategory(desc) };
 }
 
 // ── Save helper ──────────────────────────────────────────────────
@@ -189,9 +202,16 @@ function makeTransaction(row, source, bankOverride) {
 
 async function importTransactions(newItems) {
   if (!state.transactions) state.transactions = { items: [] };
+  const existingKeys = new Set(
+    (state.transactions.items || []).map(t => `${t.date}|${t.description}|${t.amount}|${t.currency}`)
+  );
+  const unique = newItems.filter(t =>
+    !existingKeys.has(`${t.date}|${t.description}|${t.amount}|${t.currency}`)
+  );
   // Prepend (newest first)
-  state.transactions.items = [...newItems, ...state.transactions.items];
+  state.transactions.items = [...unique, ...state.transactions.items];
   await saveSec('fin_transactions', state.transactions);
+  return { imported: unique.length, skipped: newItems.length - unique.length };
 }
 
 // ── Category select HTML ─────────────────────────────────────────
@@ -336,6 +356,7 @@ function renderLog(container) {
   // Delete listeners
   container.querySelectorAll('.txn-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
+      if (!confirm('Delete this transaction?')) return;
       const id = btn.dataset.id;
       state.transactions.items = state.transactions.items.filter(t => t.id !== id);
       await saveSec('fin_transactions', state.transactions);
@@ -439,9 +460,12 @@ function renderSMSPreview(previewEl) {
       previewEl.querySelector('#sms-import-status').textContent = 'No rows selected.';
       return;
     }
-    await importTransactions(toImport);
+    const { imported, skipped } = await importTransactions(toImport);
     smsParsed = [];
-    previewEl.querySelector('#sms-import-status').textContent = `${toImport.length} transaction(s) imported.`;
+    previewEl.querySelector('#sms-import-status').textContent =
+      skipped > 0
+        ? `Imported ${imported} transactions (${skipped} duplicate${skipped !== 1 ? 's' : ''} skipped).`
+        : `${imported} transaction(s) imported.`;
     // Switch to log tab
     switchTab('log');
   });
@@ -456,6 +480,13 @@ function renderCSV(container) {
         <div class="form-group">
           <label class="form-label">Select bank CSV file</label>
           <input id="csv-file" type="file" accept=".csv" class="form-input" style="padding:6px">
+        </div>
+        <div class="form-group" style="margin-top:8px">
+          <label class="form-label" for="csv-date-fmt">Date format in CSV</label>
+          <select id="csv-date-fmt" class="form-input" style="max-width:260px">
+            <option value="dmy" selected>DD/MM/YYYY (UK/EU)</option>
+            <option value="mdy">MM/DD/YYYY (US)</option>
+          </select>
         </div>
         <div id="csv-format-badge" style="margin-top:8px;display:none">
           Detected format: <span id="csv-format-name" class="badge badge-positive"></span>
@@ -491,6 +522,7 @@ function renderCSV(container) {
     const file = e.target.files[0];
     if (!file) return;
     const text = await file.text();
+    csvDateFmt = container.querySelector('#csv-date-fmt').value || 'dmy';
     csvParsed = parseCSV(text);
     if (csvParsed.format === 'unknown') {
       container.querySelector('#csv-preview').innerHTML = `<div class="alert-info" style="margin:0 16px 16px">Could not parse CSV — must have at least a header row and one data row.</div>`;
@@ -534,6 +566,7 @@ function renderCSV(container) {
           amount:      parseInt(container.querySelector('#csv-map-amt').value, 10),
           currency:    parseInt(container.querySelector('#csv-map-currency').value, 10),
         };
+        csvDateFmt = container.querySelector('#csv-date-fmt').value || 'dmy';
         renderCSVPreview(container.querySelector('#csv-preview'));
       });
     }
@@ -544,9 +577,9 @@ function renderCSV(container) {
 
 function csvRowsToMapped() {
   return csvParsed.dataRows.map(row => {
-    if (csvParsed.format === 'revolut') return mapRevolutRow(csvParsed.headers, row);
-    if (csvParsed.format === 'monzo')   return mapMonzoRow(csvParsed.headers, row);
-    return mapGenericRow(csvParsed.headers, row, csvMap);
+    if (csvParsed.format === 'revolut') return mapRevolutRow(csvParsed.headers, row, csvDateFmt);
+    if (csvParsed.format === 'monzo')   return mapMonzoRow(csvParsed.headers, row, csvDateFmt);
+    return mapGenericRow(csvParsed.headers, row, csvMap, csvDateFmt);
   }).filter(r => r.description || r.amount);
 }
 
@@ -620,8 +653,11 @@ function renderCSVPreview(previewEl) {
       return;
     }
 
-    await importTransactions(toImport);
-    previewEl.querySelector('#csv-import-status').textContent = `${toImport.length} transaction(s) imported.`;
+    const { imported, skipped } = await importTransactions(toImport);
+    previewEl.querySelector('#csv-import-status').textContent =
+      skipped > 0
+        ? `Imported ${imported} transactions (${skipped} duplicate${skipped !== 1 ? 's' : ''} skipped).`
+        : `${imported} transaction(s) imported.`;
     // Switch to log tab
     switchTab('log');
   });

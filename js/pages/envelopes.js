@@ -151,7 +151,7 @@ function render() {
             <td><strong>Total</strong></td>
             <td class="td-right mono"><strong>${fmtGBP(totalTarget)}</strong></td>
             <td class="td-right mono"><strong>${fmtGBP(totalSpent)}</strong></td>
-            <td class="td-right ${totalTarget-totalSpent < 0 ? 'roai-negative' : 'roai-positive'}"><strong>${fmtGBP(Math.abs(round2(totalTarget-totalSpent)))}</strong></td>
+            <td class="td-right ${totalTarget-totalSpent < 0 ? 'roai-negative' : 'roai-positive'}"><strong>${round2(totalTarget-totalSpent) >= 0 ? '' : '-'}${fmtGBP(Math.abs(round2(totalTarget-totalSpent)))}</strong></td>
             <td></td>
           </tr>
         </tbody>

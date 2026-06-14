@@ -173,6 +173,18 @@ export function renderSharedLayout(activeNav, state) {
   // Keyboard navigation shortcuts — G+key chords and standalone shortcuts
   (function() {
     let _gPressed = false, _gTimer = null;
+    let _chordToast = null;
+    function showChordHint() {
+      removeChordHint();
+      _chordToast = document.createElement('div');
+      _chordToast.id = 'kbd-chord-hint';
+      _chordToast.style.cssText = 'position:fixed;bottom:60px;right:20px;background:var(--accent,#00bfff);color:#000;padding:6px 12px;border-radius:6px;font-family:monospace;font-size:14px;font-weight:600;z-index:9999;pointer-events:none;';
+      _chordToast.textContent = 'G + ?';
+      document.body.appendChild(_chordToast);
+    }
+    function removeChordHint() {
+      if (_chordToast) { _chordToast.remove(); _chordToast = null; }
+    }
     const NAV_MAP = {
       d: 'dashboard.html', e: 'expenses.html', i: 'income.html',
       a: 'assets.html',    t: 'transactions.html', n: 'networth.html',
@@ -186,14 +198,16 @@ export function renderSharedLayout(activeNav, state) {
       const key = ev.key.toLowerCase();
       if (key === 'g') {
         _gPressed = true;
+        showChordHint();
         clearTimeout(_gTimer);
-        _gTimer = setTimeout(() => { _gPressed = false; }, 1000);
+        _gTimer = setTimeout(() => { _gPressed = false; removeChordHint(); }, 1000);
         return;
       }
       if (_gPressed && NAV_MAP[key]) {
         ev.preventDefault();
         _gPressed = false;
         clearTimeout(_gTimer);
+        removeChordHint();
         window.location.href = NAV_MAP[key];
         return;
       }
@@ -202,6 +216,7 @@ export function renderSharedLayout(activeNav, state) {
         showKbHelp();
       }
       _gPressed = false;
+      removeChordHint();
     });
 
     function showKbHelp() {
