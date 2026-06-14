@@ -769,21 +769,23 @@ function renderROAI(st) {
   // Stocks & Shares ISA
   const ssISA = investments.isa?.stocksAndSharesISA || {};
   if (ssISA.currentValueGBP || ssISA.annualContributionGBP) {
+    const isaYears = ssISA.startYear ? Math.max(1, new Date().getFullYear() - ssISA.startYear) : null;
     rows.push({
       name: ssISA.provider || 'S&S ISA', type: 'S&S ISA',
       valueGBP: ssISA.currentValueGBP || 0,
-      invested: ssISA.annualContributionGBP ? ssISA.annualContributionGBP * 3 : null,
+      invested: isaYears != null ? (ssISA.annualContributionGBP || 0) * isaYears : null,
     });
   }
 
   // SIPP
   const sipp = investments.sipp || {};
   if (sipp.currentValueGBP || sipp.yearToDateContributionGBP) {
+    const sippYears = sipp.startYear ? Math.max(1, new Date().getFullYear() - sipp.startYear) : null;
     const annual = (sipp.yearToDateContributionGBP || 0) + (sipp.employerContributionGBP || 0);
     rows.push({
       name: sipp.provider || 'SIPP', type: 'SIPP',
       valueGBP: sipp.currentValueGBP || 0,
-      invested: annual > 0 ? annual * 3 : null,
+      invested: sippYears != null ? annual * sippYears : null,
     });
   }
 
@@ -817,11 +819,19 @@ function renderROAI(st) {
     rows.push({ name: 'PPF', type: 'PPF', valueGBP: ppf.currentValueINR / rate, invested: null });
   }
 
-  // SGBs — cost basis = purchase price (no gain unless interest)
+  // SGBs — use currentPriceINR for market value if available, else fall back to purchase cost
   (investments.sgbs || []).forEach(x => {
     if (!x.gramsHeld && !x.series) return;
-    const cost = (x.purchasePriceINR || 0) * (x.gramsHeld || 0) / rate;
-    rows.push({ name: x.series || 'SGB', type: 'SGB', valueGBP: cost, invested: cost > 0 ? cost : null });
+    const purchaseCost = (x.purchasePriceINR || 0) * (x.gramsHeld || 0) / rate;
+    const currentPrice = x.currentPriceINR != null
+      ? x.currentPriceINR * (x.gramsHeld || 0) / rate
+      : purchaseCost;
+    rows.push({
+      name: x.series || 'SGB',
+      type: 'SGB',
+      valueGBP: currentPrice,
+      invested: purchaseCost > 0 ? purchaseCost : null,
+    });
   });
 
   const totalValue    = rows.reduce((s, r) => s + r.valueGBP, 0);

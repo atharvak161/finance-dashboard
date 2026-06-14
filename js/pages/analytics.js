@@ -630,12 +630,12 @@ function renderPeriodComparison(st) {
   const lastY = log.find(r => r.month === sameLastYearKey) || null;
 
   function logNet(entry)  { return entry?.netGBP || 0; }
-  function logExp(entry)  { return entry ? (entry.netGBP || 0) - (entry.savedGBP || 0) : 0; }
+  function logExp(entry)  { return entry ? Math.max(0, (entry.netGBP || 0) - (entry.savedGBP || 0)) : 0; }
   function logSav(entry)  { return entry?.savedGBP || 0; }
   function logRate(entry) { return entry && entry.netGBP > 0 ? round2((entry.savedGBP / entry.netGBP) * 100) : 0; }
 
   function delta(curr, prev, higherIsBetter = true) {
-    if (prev === null || prev === 0) return '';
+    if (prev === null) return '';
     const diff = curr - prev;
     if (Math.abs(diff) < 0.01) return '<span class="label-muted">—</span>';
     const up = diff > 0;
