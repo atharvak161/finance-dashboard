@@ -18,7 +18,7 @@ document.getElementById('cal-next').addEventListener('click', () => {
   render();
 });
 
-render();
+try { render(); } catch(e) { console.error('Calendar render error:', e); }
 
 function render() {
   const expenses = state.expenses || { items: [], scheduledChanges: [] };
@@ -28,8 +28,11 @@ function render() {
   const monthName = new Date(viewYear, viewMonth, 1).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
   document.getElementById('cal-month-label').textContent = monthName;
 
-  // Group items by dayOfMonth (default 1)
+  // Build calendar grid
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  // Group items by dayOfMonth (default 1)
   const byDay = {};
   let totalMonthly = 0;
   for (const item of activeItems) {
@@ -38,10 +41,6 @@ function render() {
     byDay[day].push(item);
     totalMonthly += item.monthlyGBP || 0;
   }
-
-  // Build calendar grid
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const startOffset = (firstDay + 6) % 7; // Make Mon=0
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === viewYear && today.getMonth() === viewMonth;
@@ -84,7 +83,9 @@ function render() {
     </tr>`;
   }).join('');
 
-  document.getElementById('cal-content').innerHTML = `
+  const calContent = document.getElementById('cal-content');
+  if (!calContent) return;
+  calContent.innerHTML = `
     <div class="panel" style="margin-bottom:20px">
       <div class="panel-header">
         <span class="panel-title">${monthName}</span>
