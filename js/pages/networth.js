@@ -29,17 +29,21 @@ function render(st) {
   const surplus = calculateSurplus(pay.netWithOT, totalExpenses(eff));
 
   // ── Projection fields (2-col grid) ─────────────────────────
-  document.getElementById('nw-settings-fields').innerHTML = `
+  const settingsFieldsEl = document.getElementById('nw-settings-fields');
+  if (settingsFieldsEl) {
+    settingsFieldsEl.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       ${nwField('Pension growth rate (%/yr)', 'pensionGrowthRate', nwProj.pensionGrowthRate||7)}
       ${nwField('Career transition date', 'careerTransitionDate', nwProj.careerTransitionDate||'', 'date')}
       ${nwField('New salary after transition (£/yr)', 'newSalaryGBP', nwProj.newSalaryGBP||'')}
     </div>`;
-  bindNwFields(st);
+    bindNwFields(st);
+  }
 
   // ── Scenarios ─────────────────────────────────────────────
   const target = goals.wealthTargetGBP || 4760000;
-  document.getElementById('nw-scenarios').innerHTML = `
+  const scenariosEl = document.getElementById('nw-scenarios');
+  if (scenariosEl) scenariosEl.innerHTML = `
     <div class="stat-row"><span class="stat-label">Current net worth</span>
       <span class="stat-value mono ${nw.netWorth<0?'text-negative':'text-positive'}">${fmtGBP(nw.netWorth)}</span></div>
     <div class="stat-row"><span class="stat-label">Wealth target</span><span class="stat-value mono">${fmtGBP(target)}</span></div>
@@ -60,8 +64,8 @@ function render(st) {
       </tbody>
     </table>`;
 
-  renderNwChart(st, surplus, nwProj);
-  renderAgeTrajectoryChart(st, nw.netWorth, surplus);
+  try { renderNwChart(st, surplus, nwProj); } catch (err) { console.error('networth: timeline chart failed', err); }
+  try { renderAgeTrajectoryChart(st, nw.netWorth, surplus); } catch (err) { console.error('networth: age trajectory failed', err); }
 }
 
 function nwField(label, key, value, type='number') {
@@ -72,6 +76,7 @@ function nwField(label, key, value, type='number') {
 }
 
 function bindNwFields(st) {
+  if (!st.settings) st.settings = {};
   document.querySelectorAll('.nw-proj-field').forEach(el => {
     el.addEventListener('input', () => {
       if (!st.settings.nwProjection) st.settings.nwProjection = {};
@@ -91,6 +96,7 @@ function bindNwFields(st) {
 // ── Age Trajectory Chart ──────────────────────────────────────
 
 function renderAgeTrajectoryChart(st, currentNetWorth, monthlySurplus) {
+  if (!st.settings) st.settings = {};
   const cp = st.settings?.chartParams?.ageTrajectory || {};
   const p = {
     currentAge: cp.currentAge || 25,
@@ -152,6 +158,7 @@ function renderAgeTrajectoryChart(st, currentNetWorth, monthlySurplus) {
   });
 
   if (charts['chart-age-trajectory']) { charts['chart-age-trajectory'].destroy(); delete charts['chart-age-trajectory']; }
+  if (typeof Chart === 'undefined') return;
   const ctx = document.getElementById('chart-age-trajectory')?.getContext('2d');
   if (!ctx) return;
 
@@ -200,22 +207,24 @@ function ageTrajField(label, key, value) {
 // ── Chart ─────────────────────────────────────────────────────
 
 function renderNwChart(st, surplus, nwProj) {
+  if (typeof Chart === 'undefined') return;
   const ctx = document.getElementById('chart-nw-timeline')?.getContext('2d');
   if (!ctx) return;
-  if (_chart) { _chart.destroy(); }
+  if (_chart) { _chart.destroy(); _chart = null; }
 
   const rate  = st.settings?.inrGbpRate || 83;
   const inv   = st.investments || { cashAccounts:[], pensions:[], ulips:[] };
+  const ulips = Array.isArray(inv.ulips) ? inv.ulips : [];
   const dbt   = st.debts?.sbi  || {};
   const nw    = calculateNetWorth(inv, st.debts||{sbi:{}}, rate);
 
   // ULIP growth parameters (fixes pension double-count + adds ULIP compound growth)
-  const ulipTotalGBP = inv.ulips.reduce((s, u) => s + ulipValueGBP(u, rate), 0);
-  const ulipPremGBP  = inv.ulips.reduce((s, u) => s + ulipPremiumGBP(u, rate), 0);
-  const ulipAvgRate  = inv.ulips.length
-    ? inv.ulips.reduce((s, u) => s + (u.expectedRatePercent || 12), 0) / inv.ulips.length : 12;
+  const ulipTotalGBP = ulips.reduce((s, u) => s + ulipValueGBP(u, rate), 0);
+  const ulipPremGBP  = ulips.reduce((s, u) => s + ulipPremiumGBP(u, rate), 0);
+  const ulipAvgRate  = ulips.length
+    ? ulips.reduce((s, u) => s + (u.expectedRatePercent || 12), 0) / ulips.length : 12;
   const nowD = new Date();
-  const latestEnd = inv.ulips.reduce((latest, u) => {
+  const latestEnd = ulips.reduce((latest, u) => {
     const e = new Date(u.payTermEndDate); return e > latest ? e : latest;
   }, nowD);
   const ulipPayMo = Math.max(0,

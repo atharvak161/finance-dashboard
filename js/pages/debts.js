@@ -5,6 +5,14 @@ import {
 
 const state = await initPage('debts');
 let editing = false;
+
+// Bind the static Edit button via top-level event delegation so it can never be
+// orphaned by a throw/null earlier in the render chain (Pattern 1).
+document.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('#debt-edit-btn');
+  if (editBtn && !editing) { editing = true; render(state); }
+});
+
 render(state);
 
 // ── Render ─────────────────────────────────────────────────────
@@ -13,12 +21,24 @@ function render(st) {
   const sbi  = st.debts?.sbi || {};
   const rate = st.settings?.inrGbpRate || 83;
 
-  const sch    = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, sbi.extraMonthlyINR||0);
-  const gbpOut = round2((sbi.outstandingINR||0) / rate);
+  let sch = [];
+  try {
+    sch = generateAmortisation(sbi.outstandingINR||0, sbi.ratePercent||9.9, sbi.emiINR||34090, sbi.extraMonthlyINR||0) || [];
+  } catch (err) {
+    console.error('Amortisation failed:', err);
+    sch = [];
+  }
+  const gbpOut = round2((sbi.outstandingINR||0) / rate) || 0;
   const totalInterestRemaining = sch[sch.length-1]?.totalInterest || 0;
+  // generateAmortisation returns an empty array tagged .error='EMI_TOO_LOW'
+  // when the EMI doesn't cover monthly interest (balance never amortises).
+  const emiTooLow = sch.error === 'EMI_TOO_LOW';
+  const payoffText  = emiTooLow ? 'Never' : amortPayoffDate(sch);
+  const monthsText  = emiTooLow ? 'EMI below interest' : `${sch.length} months remaining`;
 
   // ── Summary cards (read-only, computed) ───────────────────
-  document.getElementById('debt-summary').innerHTML = `
+  const summaryEl = document.getElementById('debt-summary');
+  if (summaryEl) summaryEl.innerHTML = `
     <div class="metric-card">
       <div class="label">Outstanding Balance</div>
       <div class="value text-negative">${fmtINR(sbi.outstandingINR||0)}</div>
@@ -31,8 +51,8 @@ function render(st) {
     </div>
     <div class="metric-card">
       <div class="label">Estimated Payoff</div>
-      <div class="value">${amortPayoffDate(sch)}</div>
-      <div class="sub">${sch.length} months remaining</div>
+      <div class="value">${payoffText}</div>
+      <div class="sub">${monthsText}</div>
     </div>
     <div class="metric-card">
       <div class="label">Interest Remaining</div>
@@ -48,6 +68,7 @@ function render(st) {
 function renderFields(st, sbi) {
   const wrap = document.getElementById('debt-fields');
   const btn  = document.getElementById('debt-edit-btn');
+  if (!wrap) return;
 
   if (!editing) {
     // Read-only view
@@ -59,8 +80,8 @@ function renderFields(st, sbi) {
       <div class="stat-row"><span class="stat-label">Extra monthly (₹)</span><span class="stat-value mono">${fmtINR(sbi.extraMonthlyINR||0)}</span></div>
       <div class="stat-row"><span class="stat-label">Loan start date</span><span class="stat-value mono">${sbi.startDate||'—'}</span></div>
       <div class="stat-row"><span class="stat-label">Co-applicant</span><span class="stat-value">${sbi.coApplicant||'—'}</span></div>`;
-    btn.textContent = '✏️ Edit Loan Details';
-    btn.onclick = () => { editing = true; render(st); };
+    if (btn) { btn.textContent = '✏️ Edit Loan Details'; btn.disabled = false; }
+    // Edit click handled by top-level delegation — no per-render binding needed.
     return;
   }
 
@@ -94,18 +115,19 @@ function renderFields(st, sbi) {
     });
   });
 
-  btn.textContent = 'Editing…';
-  btn.onclick = null;
+  if (btn) { btn.textContent = 'Editing…'; btn.disabled = true; }
 
-  document.getElementById('debt-cancel-btn').onclick = () => {
+  const cancelBtn = document.getElementById('debt-cancel-btn');
+  if (cancelBtn) cancelBtn.onclick = () => {
     editing = false;
     render(st);
   };
 
-  document.getElementById('debt-save-btn').onclick = async () => {
-    const saveBtn = document.getElementById('debt-save-btn');
+  const saveBtn = document.getElementById('debt-save-btn');
+  if (saveBtn) saveBtn.onclick = async () => {
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
+    if (!st.debts) st.debts = {};
     if (!st.debts.sbi) st.debts.sbi = {};
     Object.assign(st.debts.sbi, draft);
     await saveSec('fin_debts', st.debts);

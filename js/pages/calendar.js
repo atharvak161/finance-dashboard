@@ -47,24 +47,24 @@ function render() {
   const todayDate = isCurrentMonth ? today.getDate() : -1;
 
   const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const headerCells = DAYS.map(d => `<div class="cal-header-cell">${d}</div>`).join('');
+  const headerCells = DAYS.map(d => `<div class="bcal-header-cell">${d}</div>`).join('');
 
   let cells = '';
   // Empty cells before first day
-  for (let i = 0; i < startOffset; i++) cells += '<div class="cal-cell cal-cell-empty"></div>';
+  for (let i = 0; i < startOffset; i++) cells += '<div class="bcal-cell bcal-cell-empty"></div>';
   // Day cells
   for (let d = 1; d <= daysInMonth; d++) {
     const items = byDay[d] || [];
     const dayTotal = items.reduce((s, i) => s + (i.monthlyGBP || 0), 0);
     const isToday = d === todayDate;
-    cells += `<div class="cal-cell${isToday ? ' cal-cell-today' : ''}${items.length ? ' cal-cell-has-bills' : ''}">
-      <div class="cal-day-num${isToday ? ' cal-today-num' : ''}">${d}</div>
+    cells += `<div class="bcal-cell${isToday ? ' bcal-cell-today' : ''}${items.length ? ' bcal-cell-has-bills' : ''}">
+      <div class="bcal-day-num${isToday ? ' bcal-today-num' : ''}">${d}</div>
       ${items.map(item => `
-        <div class="cal-bill-chip" title="${item.name} — ${fmtGBP(item.monthlyGBP||0)}/mo">
-          <span class="cal-bill-name">${item.name}</span>
-          <span class="cal-bill-amt mono">${fmtGBP(item.monthlyGBP||0)}</span>
+        <div class="bcal-bill-chip" title="${item.name} — ${fmtGBP(item.monthlyGBP||0)}/mo">
+          <span class="bcal-bill-name">${item.name}</span>
+          <span class="bcal-bill-amt mono">${fmtGBP(item.monthlyGBP||0)}</span>
         </div>`).join('')}
-      ${dayTotal > 0 ? `<div class="cal-day-total mono">${fmtGBP(dayTotal)}</div>` : ''}
+      ${dayTotal > 0 ? `<div class="bcal-day-total mono">${fmtGBP(dayTotal)}</div>` : ''}
     </div>`;
   }
 

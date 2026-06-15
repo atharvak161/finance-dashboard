@@ -83,6 +83,8 @@ function fld(label, draft, key, type = 'number') {
 
 function renderCash(rate) {
   const el = document.getElementById('assets-content');
+  if (!el) return;
+  if (!inv().cashAccounts) inv().cashAccounts = [];
   const cash = inv().cashAccounts?.[0] || (inv().cashAccounts[0] = {});
   const editing = _editing === 'cash';
 
@@ -111,7 +113,7 @@ function renderCash(rate) {
       ${saveCancelBar('cash')}
     </div>`;
   wireEditToggles(el);
-  el.querySelector('[data-save="cash"]').addEventListener('click', async () => {
+  el.querySelector('[data-save="cash"]')?.addEventListener('click', async () => {
     Object.assign(inv().cashAccounts[0], draft);
     await persist();
     _editing = null;
@@ -123,6 +125,8 @@ function renderCash(rate) {
 
 function renderPension(rate) {
   const el = document.getElementById('assets-content');
+  if (!el) return;
+  if (!inv().pensions) inv().pensions = [];
   const pension = inv().pensions?.[0] || (inv().pensions[0] = {});
   const editing = _editing === 'pension';
 
@@ -153,7 +157,7 @@ function renderPension(rate) {
       ${saveCancelBar('pension')}
     </div>`;
   wireEditToggles(el);
-  el.querySelector('[data-save="pension"]').addEventListener('click', async () => {
+  el.querySelector('[data-save="pension"]')?.addEventListener('click', async () => {
     Object.assign(inv().pensions[0], draft);
     await persist();
     _editing = null;
@@ -165,6 +169,7 @@ function renderPension(rate) {
 
 function renderULIPs(rate) {
   const el = document.getElementById('assets-content');
+  if (!el) return;
   const ulips = inv().ulips || (inv().ulips = []);
 
   const cards = ulips.map((u, i) => {
@@ -290,6 +295,7 @@ function barColour(percent) {
 
 function renderUKWrappers(rate) {
   const el = document.getElementById('assets-content');
+  if (!el) return;
   const i = inv();
   const isa  = i.isa || (i.isa = { stocksAndSharesISA: {}, cashISA: {}, lifetimeISA: {} });
   const ssISA = isa.stocksAndSharesISA || (isa.stocksAndSharesISA = {});
@@ -473,6 +479,7 @@ function wireUKSaves(el) {
 
 function renderIndia(rate) {
   const el = document.getElementById('assets-content');
+  if (!el) return;
   const i = inv();
   const nps  = i.nps || (i.nps = {});
   const elss = i.elss || (i.elss = []);

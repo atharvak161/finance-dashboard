@@ -15,6 +15,21 @@ let _envSaveTimer;
 if (!state.envelopes) state.envelopes = { month: '', envelopes: [] };
 if (!state.envelopes.envelopes) state.envelopes.envelopes = [];
 
+// Bind the static "+ Add Envelope" button FIRST, before any awaitable work
+// below (the month-reset saveSec can reject). Binding here guarantees the
+// button is never orphaned by a throw in the seeding/reset block.
+document.getElementById('env-add-btn')?.addEventListener('click', async () => {
+  state.envelopes.envelopes.push({
+    id: 'env_' + Date.now(),
+    name: 'New Envelope',
+    category: 'Other',
+    targetGBP: 0,
+    spentGBP: 0,
+  });
+  await saveSec('fin_envelopes', state.envelopes);
+  render();
+});
+
 // If envelopes list is empty, seed from expense categories
 if (state.envelopes.envelopes.length === 0 && state.expenses?.items?.length) {
   const catTotals = {};
@@ -40,18 +55,6 @@ if (state.envelopes.month !== nowKey) {
   await saveSec('fin_envelopes', state.envelopes);
 }
 
-document.getElementById('env-add-btn').addEventListener('click', async () => {
-  state.envelopes.envelopes.push({
-    id: 'env_' + Date.now(),
-    name: 'New Envelope',
-    category: 'Other',
-    targetGBP: 0,
-    spentGBP: 0,
-  });
-  await saveSec('fin_envelopes', state.envelopes);
-  render();
-});
-
 render();
 
 function render() {
@@ -62,7 +65,10 @@ function render() {
   const totalSpent   = round2(envs.reduce((s, e) => s + (e.spentGBP || 0), 0));
   const unallocated  = round2(totalIncome - totalTarget);
   const nowKey = state.envelopes.month || new Date().toISOString().slice(0, 7);
-  const monthLabel = new Date(nowKey + '-01').toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+  const monthDate = new Date(nowKey + '-01');
+  const monthLabel = isNaN(monthDate.getTime())
+    ? nowKey
+    : monthDate.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
 
   const envCards = envs.map((env, idx) => {
     const pct = env.targetGBP > 0 ? Math.min((env.spentGBP / env.targetGBP) * 100, 100) : 0;

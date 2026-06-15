@@ -7,20 +7,59 @@ import { applyScheduledChanges, totalExpenses, fmtGBP, expensesByCategory } from
 
 const CATS = ['Housing','Debt','Insurance','Phone','Transport','Subscription','Food','Personal','Travel','Other'];
 
-const state = await initPage('expenses');
+let state;
+try {
+  state = await initPage('expenses');
+} catch (e) {
+  console.error('Expenses initPage failed:', e);
+  state = {};
+}
+
+// ── Static-HTML button wiring (delegated, render-independent) ──
+// These buttons live in expenses.html. Binding them at module top
+// level via delegation means a throw inside render() can never
+// orphan them (Pattern 1).
+document.getElementById('add-expense-btn')?.addEventListener('click', async () => {
+  const st = state;
+  if (!st.expenses) st.expenses = { items: [], scheduledChanges: [] };
+  if (!Array.isArray(st.expenses.items)) st.expenses.items = [];
+  st.expenses.items.push({ id:'exp_'+Date.now(), name:'New Expense', category:'Other', monthlyGBP:0, active:true });
+  await saveSec('fin_expenses', st.expenses);
+  render(st);
+});
+
+document.getElementById('add-sc-btn')?.addEventListener('click', async () => {
+  const st = state;
+  if (!st.expenses) st.expenses = { items: [], scheduledChanges: [] };
+  if (!Array.isArray(st.expenses.scheduledChanges)) st.expenses.scheduledChanges = [];
+  const today = new Date().toISOString().slice(0,10);
+  const firstItem = (st.expenses.items || [])[0];
+  st.expenses.scheduledChanges.push({
+    expenseId: firstItem ? firstItem.id : '',
+    changeDate: today,
+    newMonthlyGBP: 0,
+    note: '',
+  });
+  await saveSec('fin_expenses', st.expenses);
+  render(st);
+});
+
 render(state);
 
 // ── Render ─────────────────────────────────────────────────────
 
 function render(st) {
   const expenses  = st.expenses || { items:[], scheduledChanges:[] };
+  if (!expenses.items) expenses.items = [];
   if (!expenses.scheduledChanges) expenses.scheduledChanges = [];
+  st.expenses = expenses;
   const effItems  = applyScheduledChanges(expenses);
   const total     = totalExpenses(effItems);
   const today     = new Date().toISOString().slice(0,10);
 
   // Summary card — current effective monthly total (read-only)
-  document.getElementById('expenses-summary').innerHTML = `
+  const summaryEl = document.getElementById('expenses-summary');
+  if (summaryEl) summaryEl.innerHTML = `
     <div class="grid-3">
       <div class="metric-card">
         <div class="label">Monthly total</div>
@@ -30,7 +69,8 @@ function render(st) {
     </div>`;
 
   // Expense table (inline add/edit/delete — preserved)
-  document.getElementById('expenses-table-wrap').innerHTML = `
+  const tableWrap = document.getElementById('expenses-table-wrap');
+  if (tableWrap) tableWrap.innerHTML = `
     <table class="data-table">
       <thead><tr><th>Name</th><th>Category</th><th class="td-right">Monthly</th><th>Active</th><th></th></tr></thead>
       <tbody id="exp-tbody">
@@ -50,26 +90,6 @@ function render(st) {
 
   // Scheduled changes editor
   renderScheduledChanges(st, today);
-
-  // Add expense button
-  document.getElementById('add-expense-btn').onclick = async () => {
-    st.expenses.items.push({ id:'exp_'+Date.now(), name:'New Expense', category:'Other', monthlyGBP:0, active:true });
-    await saveSec('fin_expenses', st.expenses);
-    render(st);
-  };
-
-  // Add scheduled change button
-  document.getElementById('add-sc-btn').onclick = async () => {
-    const firstItem = st.expenses.items[0];
-    st.expenses.scheduledChanges.push({
-      expenseId: firstItem ? firstItem.id : '',
-      changeDate: today,
-      newMonthlyGBP: 0,
-      note: '',
-    });
-    await saveSec('fin_expenses', st.expenses);
-    render(st);
-  };
 }
 
 function expRow(item, i) {
@@ -126,6 +146,8 @@ function bindExpenseEvents(st) {
 function renderScheduledChanges(st, today) {
   const expenses = st.expenses;
   const scList = document.getElementById('scheduled-changes-list');
+  if (!scList) return;
+  if (!expenses.scheduledChanges) expenses.scheduledChanges = [];
 
   if (expenses.scheduledChanges.length === 0) {
     scList.innerHTML = '<p class="label-muted">No scheduled changes. Use “+ Add change” to schedule a future amount change.</p>';

@@ -635,17 +635,24 @@ function renderCSVPreview(previewEl) {
     previewEl.querySelectorAll('.csv-row-check').forEach(cb => { cb.checked = e.target.checked; });
   });
 
-  // Import — only imports the previewed rows that have their checkbox checked.
+  // Import — imports every mapped row. Previewed rows (first 10) honour their
+  // checkbox/category selection; rows beyond the preview window have no UI to
+  // unselect, so they are imported as-is. Previously only the first 10 rows
+  // were ever imported, silently dropping rows 11+ despite the "(N total)" label.
   previewEl.querySelector('#csv-import-btn').addEventListener('click', async () => {
-    const previewRows = mapped.slice(0, 10);
     const toImport = [];
-    previewRows.forEach((row, idx) => {
-      const cb = document.querySelector(`[data-csv-row="${idx}"]`) ||
-                 previewEl.querySelector(`.csv-row-check[data-idx="${idx}"]`);
-      if (!cb || !cb.checked) return;
-      const catSel = previewEl.querySelector(`select[name="csv-cat-${idx}"]`);
-      const category = catSel ? catSel.value : row.category;
-      toImport.push(makeTransaction({ ...row, category }, 'csv', bankName));
+    mapped.forEach((row, idx) => {
+      if (idx < 10) {
+        // Previewed row — respect its checkbox and category override.
+        const cb = previewEl.querySelector(`.csv-row-check[data-idx="${idx}"]`);
+        if (cb && !cb.checked) return;
+        const catSel = previewEl.querySelector(`select[name="csv-cat-${idx}"]`);
+        const category = catSel ? catSel.value : row.category;
+        toImport.push(makeTransaction({ ...row, category }, 'csv', bankName));
+      } else {
+        // Beyond the preview window — no checkbox exists; import as mapped.
+        toImport.push(makeTransaction({ ...row }, 'csv', bankName));
+      }
     });
 
     if (!toImport.length) {

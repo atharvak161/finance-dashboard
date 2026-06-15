@@ -8,6 +8,7 @@ import {
 // Hoisted before top-level await
 const C = { positive:'#00e676', warning:'#ff9100', grid:'rgba(0,191,255,0.07)', tick:'#3d5473' };
 let _chart = null;
+const ITR_TODAY = new Date().toISOString().slice(0, 10); // hoisted: renderIndia() uses it before its original declaration point
 
 const state = await initPage('tax');
 render(state);
@@ -49,8 +50,12 @@ function render(st) {
 
   // ── Calendar grid ─────────────────────────────────────────
   const grid     = document.getElementById('tax-calendar');
-  const start    = new Date(tt.startDate || '2026-04-06');
-  const verified = tt.verifiedMonths || [];
+  if (!grid) { renderTaxChart(tt); return; }
+  // Guard against an invalid/partial saved start date — an Invalid Date would
+  // make d.toISOString() throw a RangeError and kill the whole render below.
+  let start = new Date(tt.startDate || '2026-04-06');
+  if (isNaN(start.getTime())) start = new Date('2026-04-06');
+  const verified = Array.isArray(tt.verifiedMonths) ? tt.verifiedMonths : [];
   grid.innerHTML = '';
   for (let i = 0; i < 12; i++) {
     const d   = new Date(start.getFullYear(), start.getMonth()+i, 1);
@@ -97,9 +102,10 @@ function bindTaxFields(st) {
 
 function renderTaxChart(tt) {
   const ctx = document.getElementById('chart-tax-line')?.getContext('2d');
-  if (!ctx) return;
+  if (!ctx || typeof Chart === 'undefined') return;
   if (_chart) { _chart.destroy(); }
-  const start = new Date(tt.startDate || '2026-04-06');
+  let start = new Date(tt.startDate || '2026-04-06');
+  if (isNaN(start.getTime())) start = new Date('2026-04-06');
   const labels=[], cumulative=[];
   for (let i=0; i<=12; i++) {
     const d=new Date(start.getFullYear(),start.getMonth()+i,1);
@@ -123,8 +129,7 @@ function renderTaxChart(tt) {
 // ════════════════════════════════════════════════════════════
 // India NRI Tax Module (CA Arjun Mehta approved, spec v1.1)
 // ════════════════════════════════════════════════════════════
-
-const ITR_TODAY = new Date().toISOString().slice(0, 10);
+// ITR_TODAY hoisted to module top (used by renderIndia at load time)
 
 // Defensive accessor — old saved data won't have fin_india_tax fields.
 function itState(st) {

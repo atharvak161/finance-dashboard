@@ -38,7 +38,8 @@ function render(st) {
   const runwayMonths  = surplus > 0 ? round2((inv.cashAccounts?.[0]?.balanceGBP||0) / totalExp) : 0;
 
   // ── KPI cards ─────────────────────────────────────────────
-  document.getElementById('analytics-kpis').innerHTML = [
+  const kpisEl = document.getElementById('analytics-kpis');
+  if (kpisEl) kpisEl.innerHTML = [
     kpiCard('Savings Rate',  fmtPct(savingsRate),           savingsRate>=20?'positive':savingsRate>=10?'warning':'negative', 'vs industry 20%+',  savingsRate>=20?'Above benchmark':savingsRate>=10?'Near benchmark':'Below benchmark'),
     kpiCard('Housing Ratio', fmtPct(housingRatio),          housingRatio<=30?'positive':'negative',                         'vs industry <30%',  housingRatio<=30?'Within safe limit':'Exceeds guideline'),
     kpiCard('Invest Rate',   fmtPct(investRate),            investRate>=10?'positive':'warning',                            'vs industry 10%+',  investRate>=10?'On track':'Room to grow'),
@@ -46,7 +47,8 @@ function render(st) {
   ].join('');
 
   // ── Career impact ─────────────────────────────────────────
-  document.getElementById('analytics-career').innerHTML = `
+  const careerEl = document.getElementById('analytics-career');
+  if (careerEl) careerEl.innerHTML = `
     <table class="data-table">
       <thead><tr><th>Salary</th><th class="td-right">Net/mo</th><th class="td-right">Surplus/mo</th><th class="td-right">Savings %</th></tr></thead>
       <tbody>
@@ -66,7 +68,8 @@ function render(st) {
     </table>`;
 
   // ── Key metrics table ──────────────────────────────────────
-  document.getElementById('analytics-metrics').innerHTML = `
+  const metricsEl = document.getElementById('analytics-metrics');
+  if (metricsEl) metricsEl.innerHTML = `
     <div class="grid-3">
       <div>
         <table class="data-table">
@@ -106,14 +109,17 @@ function render(st) {
       </div>
     </div>`;
 
-  renderRatiosChart({ savingsRate, housingRatio, investRate, debtIncome });
-  renderSankey(st);
-  renderSavingsRateChart(st);
-  renderSurplusTrajectoryChart(st);
-  renderSpendHeatmap(st);
-  renderBudgetRadarChart(st);
-  renderYoYChart(st);
-  renderPeriodComparison(st);
+  // Each section is isolated so a failure in one (e.g. a Chart.js init error)
+  // cannot orphan the interactive elements (YoY toggle buttons) rendered later.
+  const safe = (fn, name) => { try { fn(); } catch (err) { console.error(`analytics: ${name} failed`, err); } };
+  safe(() => renderRatiosChart({ savingsRate, housingRatio, investRate, debtIncome }), 'ratios');
+  safe(() => renderSankey(st), 'sankey');
+  safe(() => renderSavingsRateChart(st), 'savingsRate');
+  safe(() => renderSurplusTrajectoryChart(st), 'surplusTrajectory');
+  safe(() => renderSpendHeatmap(st), 'spendHeatmap');
+  safe(() => renderBudgetRadarChart(st), 'budgetRadar');
+  safe(() => renderYoYChart(st), 'yoy');
+  safe(() => renderPeriodComparison(st), 'periodComparison');
 }
 
 function kpiCard(label, value, colorClass, benchmarkLabel, statusText) {
@@ -138,6 +144,7 @@ function kpiCard(label, value, colorClass, benchmarkLabel, statusText) {
 
 function getCtx(id) {
   if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  if (typeof Chart === 'undefined') return null;
   return document.getElementById(id)?.getContext('2d') || null;
 }
 
@@ -555,9 +562,10 @@ function renderYoYChart(st) {
   if (charts['yoy-chart']) { charts['yoy-chart'].destroy(); delete charts['yoy-chart']; }
 
   // Clear canvas placeholder
-  section.querySelector('.chart-wrap').innerHTML = '<canvas id="yoy-chart"></canvas>';
+  const chartWrap = section.querySelector('.chart-wrap');
+  if (chartWrap) chartWrap.innerHTML = '<canvas id="yoy-chart"></canvas>';
   const ctx = document.getElementById('yoy-chart')?.getContext('2d');
-  if (!ctx) return;
+  if (!ctx || typeof Chart === 'undefined') return;
 
   charts['yoy-chart'] = new Chart(ctx, {
     type: 'bar',
@@ -718,9 +726,10 @@ function renderPeriodComparison(st) {
 }
 
 function renderRatiosChart({ savingsRate, housingRatio, investRate, debtIncome }) {
+  if (typeof Chart === 'undefined') return;
   const ctx = document.getElementById('chart-ratios')?.getContext('2d');
   if (!ctx) return;
-  if (_chart) { _chart.destroy(); }
+  if (_chart) { _chart.destroy(); _chart = null; }
   const labels     = ['Savings %', 'Housing %', 'Invest %', 'Debt/Income %'];
   const actual     = [savingsRate, housingRatio, investRate, debtIncome];
   const benchmarks = [20, 30, 10, 20];

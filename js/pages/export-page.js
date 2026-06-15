@@ -15,9 +15,13 @@ const rate  = state.settings?.inrGbpRate || 83;
 
 // ── Excel export ───────────────────────────────────────────────
 
-document.getElementById('export-excel-btn').addEventListener('click', () => exportExcel(state));
+document.getElementById('export-excel-btn')?.addEventListener('click', () => exportExcel(state));
 
 function exportExcel(st) {
+  if (typeof XLSX === 'undefined') {
+    alert('Excel library failed to load. Check your connection and reload the page.');
+    return;
+  }
   const wb  = XLSX.utils.book_new();
   const inv = st.investments || { cashAccounts:[], pensions:[], ulips:[] };
   const dbt = st.debts       || { sbi:{} };
@@ -97,7 +101,19 @@ document.getElementById('data-import-btn')?.addEventListener('click', () =>
 );
 document.getElementById('data-import-file')?.addEventListener('change', async e => {
   const file = e.target.files[0]; if(!file) return;
-  const data = JSON.parse(await file.text());
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch {
+    alert('Import failed: the selected file is not valid JSON.');
+    e.target.value = '';
+    return;
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    alert('Import failed: the backup file format is not recognised.');
+    e.target.value = '';
+    return;
+  }
   Object.entries(data).forEach(([k,v]) => localStorage.setItem(k,v));
   alert('Import successful. Reloading...');
   location.reload();

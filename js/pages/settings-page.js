@@ -485,7 +485,7 @@ function renderData(content) {
     </div>
   </div>`;
 
-  document.getElementById('data-export-btn').addEventListener('click', () => {
+  document.getElementById('data-export-btn')?.addEventListener('click', () => {
     const keys = Object.keys(localStorage).filter(k=>k.startsWith('fin_')||k.startsWith('auth_')||k.startsWith('enc_'));
     const data = {};
     keys.forEach(k => data[k] = localStorage.getItem(k));
@@ -496,18 +496,30 @@ function renderData(content) {
     a.click(); URL.revokeObjectURL(url);
   });
 
-  document.getElementById('data-import-btn').addEventListener('click', () =>
-    document.getElementById('data-import-file').click()
+  document.getElementById('data-import-btn')?.addEventListener('click', () =>
+    document.getElementById('data-import-file')?.click()
   );
-  document.getElementById('data-import-file').addEventListener('change', async e => {
+  document.getElementById('data-import-file')?.addEventListener('change', async e => {
     const file = e.target.files[0]; if(!file) return;
-    const data = JSON.parse(await file.text());
+    let data;
+    try {
+      data = JSON.parse(await file.text());
+    } catch {
+      alert('Import failed: the selected file is not valid JSON.');
+      e.target.value = '';
+      return;
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      alert('Import failed: the backup file format is not recognised.');
+      e.target.value = '';
+      return;
+    }
     Object.entries(data).forEach(([k,v]) => localStorage.setItem(k,v));
     alert('Import successful. Reloading...');
     location.reload();
   });
 
-  document.getElementById('data-reset-btn').addEventListener('click', async () => {
+  document.getElementById('data-reset-btn')?.addEventListener('click', async () => {
     if (!confirm('Reset ALL financial data to defaults? This cannot be undone.')) return;
     await initializeDefaults();
     alert('Data reset to defaults.');

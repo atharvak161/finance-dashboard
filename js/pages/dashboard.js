@@ -41,17 +41,25 @@ function destroyAllCharts() {
   for (const id of Object.keys(dashCharts)) { dashCharts[id].destroy(); delete dashCharts[id]; }
 }
 
-const state = await initPage('overview');
+let state;
+try {
+  state = await initPage('overview');
+} catch (e) {
+  console.error('Dashboard initPage failed:', e);
+  state = {};
+}
 
 // ── Tab wiring ────────────────────────────────────────────────
+// Bind via document-level delegation so a throw inside any render
+// never orphans the tab buttons (they live in static HTML).
 let activeTab = 'overview';
-document.querySelectorAll('.dash-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.dash-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeTab = btn.dataset.tab;
-    renderDashTab(activeTab, state);
-  });
+document.getElementById('dash-tabs')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.dash-tab');
+  if (!btn) return;
+  document.querySelectorAll('.dash-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeTab = btn.dataset.tab;
+  renderDashTab(activeTab, state);
 });
 renderDashTab('overview', state); // initial render
 
@@ -60,11 +68,11 @@ async function updateTopbarRate() {
   const el = document.getElementById('topbar-rate-value');
   const timeEl = document.getElementById('topbar-rate-time');
   const container = document.getElementById('topbar-rate');
-  if (!container) return;
+  if (!container || !el || !timeEl) return;
   container.style.display = 'flex';
   try {
     const r = await fetchLiveRate();
-    if (r.rate) {
+    if (r && r.rate) {
       el.textContent = `£1 = ₹${r.rate.toFixed(2)}`;
       timeEl.textContent = `· ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})} ↻`;
     }
@@ -82,18 +90,25 @@ function renderDashTab(tab, st) {
   destroyAllCharts();
   const host = document.getElementById('dash-content');
   if (!host) return;
-  switch (tab) {
-    case 'overview':  renderOverview(host, st);  break;
-    case 'income':    renderIncome(host, st);    break;
-    case 'expenses':  renderExpenses(host, st);  break;
-    case 'debts':     renderDebts(host, st);     break;
-    case 'assets':    renderAssets(host, st);    break;
-    case 'networth':  renderNetWorth(host, st);  break;
-    case 'goals':     renderGoals(host, st);     break;
-    case 'ot':        renderOT(host, st);        break;
-    case 'tax':       renderTax(host, st);       break;
-    case 'analytics': renderAnalytics(host, st); break;
-    default:          renderOverview(host, st);
+  const safeState = st || {};
+  try {
+    switch (tab) {
+      case 'overview':  renderOverview(host, safeState);  break;
+      case 'income':    renderIncome(host, safeState);    break;
+      case 'expenses':  renderExpenses(host, safeState);  break;
+      case 'debts':     renderDebts(host, safeState);     break;
+      case 'assets':    renderAssets(host, safeState);    break;
+      case 'networth':  renderNetWorth(host, safeState);  break;
+      case 'goals':     renderGoals(host, safeState);     break;
+      case 'ot':        renderOT(host, safeState);        break;
+      case 'tax':       renderTax(host, safeState);       break;
+      case 'analytics': renderAnalytics(host, safeState); break;
+      default:          renderOverview(host, safeState);
+    }
+  } catch (e) {
+    console.error(`Dashboard tab "${tab}" render error:`, e);
+    host.innerHTML = `<div class="panel" style="color:#ff4d4d;padding:24px;font-family:monospace;font-size:12px">
+      This view failed to render: ${e.message}. Switch to another tab and back, or check your data in Settings.</div>`;
   }
 }
 

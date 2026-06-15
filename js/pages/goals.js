@@ -6,6 +6,13 @@ import {
   fmtGBP, fmtPct, round2
 } from '../calc.js';
 
+// Module state — declared BEFORE render() to avoid temporal-dead-zone errors,
+// since render() runs immediately at module load and references all four.
+let _savingsChart = null;
+let _savingsGauge = null;
+let _editingSavings = false;
+let _editing = false;
+
 const state = await initPage('goals');
 render(state);
 
@@ -130,10 +137,7 @@ function renderSummaryCards(st) {
 }
 
 // ── Savings Goal Achievability ────────────────────────────────
-
-let _savingsChart = null;
-let _savingsGauge = null;
-let _editingSavings = false;
+// (_savingsChart, _savingsGauge, _editingSavings hoisted to module top)
 
 function renderSavingsAchievability(st) {
   const el = document.getElementById('goals-savings-achievability');
@@ -499,8 +503,7 @@ function renderSavingsEditForm(st, el) {
 }
 
 // ── Edit panel ────────────────────────────────────────────────
-
-let _editing = false;
+// (_editing hoisted to module top)
 
 function renderEditPanel(st) {
   const body = document.getElementById('goals-edit-body');

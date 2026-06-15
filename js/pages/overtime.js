@@ -6,7 +6,13 @@ import { calculateNetPay, totalExpenses, fmtGBP, round2 } from '../calc.js';
 // Types: 'regular' | 'weekend' | 'bank_holiday'
 // Net = gross * (1 - 0.40) effective tax estimate
 
-const state = await initPage('overtime');
+let state;
+try {
+  state = await initPage('overtime');
+} catch (e) {
+  console.error('Overtime initPage failed:', e);
+  state = {};
+}
 
 // Ensure data structures exist
 if (!Array.isArray(state.otShifts)) state.otShifts = [];
@@ -150,6 +156,7 @@ function render() {
   if (chartDoughnut) { try { chartDoughnut.destroy(); } catch(_) {} chartDoughnut = null; }
 
   const content = document.getElementById('content');
+  if (!content) { console.error('Overtime: #content not found'); return; }
   content.innerHTML = `
     <div class="section-header">
       <div>
@@ -166,8 +173,14 @@ function render() {
     ${renderSavingsForecast()}
   `;
 
+  // Bind handlers BEFORE chart init so a Chart.js throw can never
+  // orphan the page's buttons/inputs (Pattern 1).
   attachEvents();
-  initCharts();
+  try {
+    initCharts();
+  } catch (e) {
+    console.error('Overtime initCharts error:', e);
+  }
 }
 
 // ── Summary cards ─────────────────────────────────────────────

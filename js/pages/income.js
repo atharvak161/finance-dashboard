@@ -4,7 +4,13 @@ import { calculateNetPay, fmtGBP } from '../calc.js';
 // Edit-only Income page. Charts now live on the dashboard.
 // Summary cards (read-only, computed from state) + an Edit/Save details panel.
 
-const state = await initPage('income');
+let state;
+try {
+  state = await initPage('income');
+} catch (e) {
+  console.error('Income initPage failed:', e);
+  state = {};
+}
 
 let editMode = false;
 
