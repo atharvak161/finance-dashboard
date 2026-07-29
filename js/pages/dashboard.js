@@ -35,6 +35,7 @@ const C = {
 const dashCharts = {};
 function getCtx(id) {
   if (dashCharts[id]) { dashCharts[id].destroy(); delete dashCharts[id]; }
+  if (typeof Chart === 'undefined') return null;
   return document.getElementById(id)?.getContext('2d') || null;
 }
 function destroyAllCharts() {

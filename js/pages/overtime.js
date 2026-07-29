@@ -341,6 +341,7 @@ function renderCharts() {
 }
 
 function initCharts() {
+  if (typeof Chart === 'undefined') return;
   // Bar chart — last 12 months OT hours
   const months = last12Months();
   const labels = months.map(shortMonthLabel);
