@@ -4,6 +4,69 @@ A personal finance tracker built with vanilla HTML, CSS, and JavaScript. No logi
 
 ---
 
+## Architecture
+
+### Shape
+
+```
+  16 HTML pages ── one per view, each a thin shell
+      │           dashboard · transactions · expenses · income · goals ·
+      │           debts · assets · networth · envelopes · calendar ·
+      │           overtime · tax · analytics · export · settings · index
+      ▼
+  js/page-init.js ──── boots every page: layout, theme, nav, page module
+  js/shared-layout.js  the chrome each page shares
+      │
+      ├──▶ js/pages/*.js    15 modules — one per page, DOM wiring only
+      │
+      ├──▶ js/store.js      the ONLY module that touches persistence
+      │    js/calc.js       all money maths, pure functions
+      │    js/csv-import.js js/fx-rate.js js/defaults.js
+      │
+      └──▶ js/vendor/chart.min.js    Chart.js 4.4.1, vendored not CDN
+```
+
+Multi-page rather than single-page, deliberately. Each view is a real HTML file
+with its own URL, so the browser handles routing, history and bookmarks, and a
+bug in one page cannot take down the others.
+
+### Data
+
+```
+  everything lives in localStorage — one browser, one device, never sent
+      │
+      ├── no account, no login, no server, no sync
+      ├── js/store.js is the single read/write boundary
+      └── js/calc.js derives every figure; nothing derived is stored
+```
+
+There is no backend and no network call for your data. That is the core
+constraint the whole design follows from: no account to breach, no server to
+leak, and no third party holding your finances. The cost is equally real —
+clearing site data loses everything, and nothing syncs between devices. Use
+the export page.
+
+### Offline
+
+`sw.js` registers a service worker that caches the shell and assets, so the
+dashboard opens and works with no connection. `js/sw-client.js` handles
+registration and update prompts.
+
+### Why it is shaped this way
+
+**Derived values are never persisted.** `store.js` holds only what you entered;
+`calc.js` recomputes every total, balance and projection on read. A stored
+total can drift out of step with the rows it came from — a recomputed one
+cannot.
+
+**Chart.js is vendored, not loaded from a CDN.** A finance dashboard should not
+break, or become injectable, because someone else's CDN had a bad day. The
+vendored file is byte-identical to the official 4.4.1 UMD build.
+
+**No build step.** Open `index.html` and it runs. What is committed is what
+executes, so there is no bundled output to review separately from the source.
+
+
 ## What it does
 
 - **Dashboard** — at-a-glance summary of income, expenses, net worth, and savings rate
