@@ -40,9 +40,17 @@ bug in one page cannot take down the others.
       └── js/calc.js derives every figure; nothing derived is stored
 ```
 
-There is no backend and no network call for your data. That is the core
-constraint the whole design follows from: no account to breach, no server to
-leak, and no third party holding your finances. The cost is equally real —
+Your financial data never leaves the browser. There is no backend, no account
+and no sync, so there is no account to breach, no server to leak, and no third
+party holding your finances.
+
+Two outbound calls do exist, and neither carries your data: the live GBP/INR
+exchange rate is fetched from `api.frankfurter.app`, falling back to
+`open.er-api.com`, and cached for four hours in localStorage. If both are
+unreachable the app falls back to the fixed rate in Settings and keeps working
+offline. Google Fonts is the only other external request.
+
+The cost of the no-backend design is equally real —
 clearing site data loses everything, and nothing syncs between devices. Use
 the export page.
 
@@ -78,6 +86,11 @@ executes, so there is no bundled output to review separately from the source.
 - **Net Worth** — net worth over time with age-trajectory projection charts
 - **Analytics** — budget-by-category and compound growth charts
 - **Tax Tracker** — tracks underpayment deductions, tax code, and verified months
+- **Transactions** — a full transaction ledger with filtering and categorisation
+- **Bill Calendar** — recurring bills and due dates on a month view
+- **OT Tracker** — overtime hours and the pay they translate to
+- **Envelopes** — envelope budgeting, allocating income to spending pots
+- **CSV Import** — import bank statements (Monzo and Revolut formats supported, plus a generic template) with auto-categorisation
 - **Export** — download all your data as JSON for backup
 - **Settings** — enter your personal numbers; configure INR/GBP rate, theme, and projection parameters
 
@@ -121,6 +134,10 @@ Once you have filled in a section via Settings, the amber border disappears auto
 | Net Worth | `networth.html` | Net worth chart and age-trajectory projection |
 | Analytics | `analytics.html` | Budget-by-category and compound growth charts |
 | Tax | `tax.html` | Tax code, underpayment tracker, verified months |
+| Transactions | `transactions.html` | Transaction ledger with filtering and categorisation |
+| Bill Calendar | `calendar.html` | Recurring bills and due dates on a month view |
+| OT Tracker | `overtime.html` | Overtime hours and resulting pay |
+| Envelopes | `envelopes.html` | Envelope budgeting — allocate income into spending pots |
 | Export | `export.html` | Download all data as JSON |
 | Settings | `settings.html` | Enter all personal financial data |
 
@@ -142,7 +159,7 @@ There is no account, no login, and no remote storage.
 - **ES modules** — pages import shared utilities (`store.js`, `page-init.js`, `shared-layout.js`)
 - **Progressive Web App** — `sw.js` registers a service worker for offline use
 - **localStorage** — plain JSON, no encryption
-- **INR/GBP dual-currency** — a configurable exchange rate (default 83) is used throughout for INR equivalents
+- **INR/GBP dual-currency** — the live rate is fetched and cached for four hours, with a configurable fallback (default 83) used offline
 
 ---
 
